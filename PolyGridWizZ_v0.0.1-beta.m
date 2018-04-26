@@ -73,13 +73,13 @@ close all
 global bc4
 bc4 = ones(4,6);
 CarpCoeff
-%% P1: Read-in settings       (User input required)
+%% P1: Read-in settings          (User input required)
 
 readfiles=false       % true  -> Read in ascii-files of airfoil
                       % false -> Airfoil is defined by function
                         
 %Don't forget to set sharp=true in case of a sharp TE profile
-sharp=false            % true  -> sharp trailing edge
+sharp=true            % true  -> sharp trailing edge
                       % false -> blunt trailing edge
                         
 % READ-IN SETTINGS
@@ -117,73 +117,82 @@ if sharp==false && readfiles==false
     xlck = linspace(0,1,ncheck);
     ylck = linspace(0,1,ncheck);
     slck = linspace(0,1,ncheck);
+
     ytck = t/0.2*c*( 0.2969*sqrt(xck/c)+(-0.1260*xck/c)+(-0.3516*(xck/c).^2)+0.2843*(xck/c).^3+(-0.1015)*(xck/c).^4 );
+
     for i=2:ncheck
         if(xck(i) <= p*c)
-            yc = m*xck(i)/p^2*(2*p-xck(i)/c);
-            dycdx = 2*m/(p^2)*(p-xck(i)/c);
+            yc = m*xck(i)/(p^2)*(2*p-xck(i));
+            dycdx = 2*m/(p^2)*(p-xck(i));
         else
-            yc = m*(c-xck(i))/(1-p)^2*(1+xck(i)/c-2*p);
-            dycdx = 2*m/(1-p)^2*(p-xck(i)/c);
+            yc = m/((1-p)^2)*(1-2*p+2*p*xck(i)-xck(i).^2); %(c-xck(i))*(1+xck(i)/c-2*p);
+            dycdx = 2*m/((1-p)^2)*(p-xck(i));
         end
+
         yuck(i) = yc+ytck(i)*cos(atan(dycdx));
         xuck(i) = xck(i)*cos(sang)-ytck(i)*sin(atan(dycdx));
+%         if xuck(i)<0
+%             xuck(i)=0;
+%         end
         suck(i) = suck(i-1)+sqrt((yuck(i)-yuck(i-1))^2+(xuck(i)-xuck(i-1))^2);
         %
         ylck(i) = yc-ytck(i)*cos(atan(dycdx));
         xlck(i) = xck(i)*cos(sang)+ytck(i)*sin(atan(dycdx));
+%         if xlck(i)<0
+%             xlck(i)=0;
+%         end
         slck(i) = slck(i-1)+sqrt((ylck(i)-ylck(i-1))^2+(xlck(i)-xlck(i-1))^2);
     end
+    
     D=ytck-ylck;
     i=round(ncheck/2);
-    if sharp==false
-        while D(i)>=TE_thickness && i<=ncheck
-            n_max=i;
-            i=i+1;
-        end
-    else
-        n_max=size(D,2);
-    end
-    x_fin=xuck;%(1:n_max)./xuck(n_max);
-    yu_fin=ytck;%(1:n_max)./xuck(n_max);
-    yl_fin=ylck;%(1:n_max)./xuck(n_max);
-
-    i=1
-    while x_fin(i)<=0.5
-        n_break=i;
+    while D(i)>=TE_thickness && i<=ncheck
+        n_max=i;
         i=i+1;
     end
-    clear vars C1 C2 C3 C4
-    C1(:,1)=x_fin(n_break:end);
-    C1(:,3)=yu_fin(n_break:end);
-    C2(:,1)=x_fin(n_break:end);
-    C2(:,3)=yl_fin(n_break:end);
-    C3(:,1)=x_fin(1:n_break);
-    C3(:,3)=yu_fin(1:n_break);
-    C4(:,1)=x_fin(1:n_break);
-    C4(:,3)=yl_fin(1:n_break);
+            
+    [minxu1,minxu2]=min(xuck)
+    [minxl1,minxl2]=min(xlck)
+    if minxu1 < minxl1
+        xu_fin=xuck(minxu2:end);
+        yu_fin=yuck(minxu2:end);
+        xl_fin=xuck(minxu2:-1:1);
+        yl_fin=yuck(minxu2:-1:1);
+        xl_fin(minxu2:minxu2+size(xlck,2)-1)=xlck(1:end);
+        yl_fin(minxu2:minxu2+size(ylck,2)-1)=ylck(1:end);
+    else
+        'allocation of arrays still needs to be done accordingly'
+        stop
+    end
 
-    % Original profile that will be cut-off at vertical line
+    i=1
+    while xu_fin(i)<=0.5
+        nu_break=i;
+        i=i+1;
+    end
+    while xl_fin(i)<=0.5
+        nl_break=i;
+        i=i+1;
+    end
+
+    C1(:,1)=xu_fin(nu_break:end);
+    C1(:,3)=yu_fin(nu_break:end);
+    C2(:,1)=xl_fin(nl_break:end);
+    C2(:,3)=yl_fin(nl_break:end);
+    C3(:,1)=xu_fin(1:nu_break);
+    C3(:,3)=yu_fin(1:nu_break);
+    C4(:,1)=xl_fin(1:nl_break);
+    C4(:,3)=yl_fin(1:nl_break);
+    
     figure
-    plot(xck,ytck)
+    plot(C1(:,1),C1(:,3),'r')
     hold on
-    plot(xck,ylck)
-    plot(linspace(-0.5,0.5,10).*0+xuck(n_max),linspace(-0.5,0.5,10))
-    daspect([1 1 1])
-    % Profile for grid generation
-    figure
-    plot(C1(:,1),C1(:,3),'k')
-    hold on
-    plot(C2(:,1),C2(:,3),'k')
-    plot(C3(:,1),C3(:,3),'k')
+    plot(C2(:,1),C2(:,3),'g')
+    plot(C3(:,1),C3(:,3),'b')
     plot(C4(:,1),C4(:,3),'k')
     daspect([1 1 1])
 end
 if sharp==true
-%     xck = linspace(0,pi,ncheck);
-%     for i=1:ncheck
-%         xck(i)=(1-cos(xck(i)))/2;
-%     end
     xck = linspace(0,1,ncheck);
     xuck = linspace(0,1,ncheck);
     yuck = linspace(0,1,ncheck);
@@ -238,11 +247,6 @@ if sharp==true
         'allocation of arrays still needs to be done accordingly'
         stop
     end
-        
-%     xu_fin=xuck;%(1:n_max)./xuck(n_max);
-%     xl_fin=xlck;%(1:n_max)./xuck(n_max);
-%     yu_fin=ytck;%(1:n_max)./xuck(n_max);
-%     yl_fin=ylck;%(1:n_max)./xuck(n_max);
 
     i=1
     while xu_fin(i)<=0.5
@@ -272,6 +276,7 @@ if sharp==true
     daspect([1 1 1])
 end
 'Raw contour generated'
+a_rad_offset=atan((C1(end,1)-C2(end,1))/(C1(end,3)-C2(end,3)))
 %
 % Redistribute points along surface
 CC=flipud(C2);
@@ -291,7 +296,7 @@ C1=CC(size(C2,1)+size(C4,1)-1+size(C3,1)-1:size(C2,1)+size(C4,1)-1+size(C3,1)-1+
 clearvars CC CCnew sCCnew sCC
 
 'Equidistant resolution --->',space
-%% P2: Setting angle of attack          (User settings required)
+%% P2: Setting angle of attack   (User settings required)
 
 % Rotate Profile
 a_deg = 5.0;                  % Angle of attack (degrees)
@@ -716,19 +721,22 @@ blend_C=round(Nc2*0.25)             % Number of points left & right of LE which 
 %--------------------------------------------------------------------------
 %Overrule parameters here
 
-%Those parameters are just for the default blunt trailing edge
-Nk=30 %recommended as default for sharp trailing edge: Nk=10
-StretchW_=20 % default as 1 means no stretching (used for sharp TE)
-StretchW=20  % default as 1 means no stretching (used for sharp TE)
+% %Those parameters are just for the default blunt trailing edge
+Nk=20 %recommended as default for sharp trailing edge: Nk=10
+StretchW_=5 % default as 1 means no stretching (used for sharp TE)
+StretchW=5  % default as 1 means no stretching (used for sharp TE)
+Nk_low=Nk*5 % For blunt trailing edge the control factor can be adjusted separately
 
-% %Those parameters are just for the default sharp trailing edge
+%Those parameters are just for the default sharp trailing edge
 % Nk=10
 % StretchW_=1
 % StretchW=1  
+% Nk_low=Nk
 %--------------------------------------------------------------------------
 %% Start calculation of airfoil surface
 %%   Discretisation of trailing edge (TE) 
 if sharp==false
+    a_deg=a_deg+a_rad_offset;
     y_TE  =  linspace(yTE2,yTE1,NTEw);
     x_TE  =  xTEl+(xTEu-xTEl)/(yTE1-yTE2)*(y_TE-yTE2);
     s_TE  =  sqrt((xTEu-xTEl)^2+(yTE1-yTE2)^2);
@@ -1028,9 +1036,11 @@ StretchW_=StretchW
 if sharp==true
     StretchW=0;
     s_TE=0;
+    djTE=0;
 end
-yTEuC=yTE1+StretchW*s_TE
-yTElC=yTE2-StretchW*s_TE
+s_TE=sqrt((xTEu-xTEl)^2+(yTE1-yTE2)^2);
+yTEuC=yTE1+StretchW*s_TE/2 %djTE/2*NTEw-djTE/2*NTEw
+yTElC=yTE2-StretchW*s_TE/2 %djTE/2*NTEw-djTE/2*NTEw
 
 % It is tried to adapt the raw-resolution of the airfoil extension to the
 %   raw resolution of the airfoil
@@ -1045,55 +1055,43 @@ ddyC1 = deriv(dyC1,1);
 dydxC1=dyC1./dxC1;
 ddydxC1=dyC1./dxC1.*deriv((1./dxC1),1)+ddyC1./((dxC1).^2);
 
+yw1=yTE1-(xTEc_-xTEu)*atan(a_deg-a_rad_offset);
+yw2=yTE2-(xTEc_-xTEl)*atan(a_deg-a_rad_offset);
+
 %Generate polynomial extension
 w_xu=linspace(xTEu,xTEc,N_discrW);
-test2=round(N_discrW/Nk
-Nk=round(N_discrW/test2)
 dw_xu=deriv(w_xu',1);
-w_yu1=Poly6_s(N_discrW/Nk,xTEu,xTEc_,yTE1,yTE1,dydxC1(end),0,ddydxC1(end),0,0,'t');
+w_yu1=Poly6_s(N_discrW/Nk,xTEu,xTEc_,yTE1,yw1,dydxC1(end),0,ddydxC1(end),0,0,'f');
 w_yu1(N_discrW/Nk:size(w_xu,2))=w_yu1(N_discrW/Nk);
 
 %Blend y-coordinate of polynomial with a horizontal line going through the
 %  corner of the trailing edge
-lam=[1:N_discrW/Nk];
-a=-2/( 2*((1-size(lam,2)^3)-3*(1-size(lam,2))) - ((1-size(lam,2)^2)-2*(1-size(lam,2)))*3*(1+size(lam,2)) );
-b=-a*(3*(1+size(lam,2)))/2;
-c=-3*a-2*b;
-d=-a-b-c;
-bl_=a*lam.^3+b*lam.^2+c*lam+d;
-bl(1)=0;
-bl(2:size(lam,2)+1)=bl_;
-bl(size(lam,2)+2)=1;
-blendW=bl;               %% Assign blending function
-blendW(size(bl,2)+1:size(w_xu,2))=1;
-clearvars lam bl bl_ a b c d
+blendW=Poly6_end(N_discrW/Nk,0,1,0,0,0,0,0,'f');
+bl(1:N_discrW/Nk)=blendW;
+bl(N_discrW/Nk+1:N_discrW)=bl(end);
+blendW=bl;% Assign blending function
+clearvars lam bl bl_ a b c d blendWL
 w_yu = w_yu1 + blendW.*(yTE1-w_yu1);
 
 figure
-plot(w_yu1)
+plot(C1(:,1),C1(:,3),'-k')
 hold on
-plot(w_yu1.*0+yTE1)
-plot(w_yu)
+plot(C2(:,1),C2(:,3),'-k')
+plot(w_xu,w_yu1,'--')
+plot(w_xu,w_yu1.*0+yTE1,'--')
+plot(w_xu,w_yu,'--')
 
-% Checking intermediate result:
-C_test(:,1)=C1(:,1);
-C_test(:,2)=C1(:,3);
-C_test(size(C1,1)+1:size(C1,1)+size(w_xu,2)-1,1)=w_xu(1,2:end);
-C_test(size(C1,1)+1:size(C1,1)+size(w_xu,2)-1,2)=w_yu1(1,2:end);
-C_new(:,1)=w_xu(1,1:end);
-C_new(:,2)=w_yu1(1,1:end);
-figure
-plot(C_test(:,1),deriv(deriv(C_test(:,2),1),1)./(deriv(C_test(:,1),1).^2)+deriv(C_test(:,2),1)./deriv(C_test(:,1),1).*deriv(1./(deriv(C_test(:,1),1)),1),'b')
-hold on
-plot(x_c1,deriv(deriv(C1(:,3),1),1)./(deriv(C1(:,1),1).^2)+deriv(C1(:,3),1)./deriv(C1(:,1),1).*deriv(1./(deriv(C1(:,1),1)),1),'r')
-plot(w_xu,deriv(deriv(C_new(:,2),1),1)./(deriv(C_new(:,1),1).^2)+0*deriv(C_new(:,2),1)./deriv(C_new(:,1),1).*deriv(1./(deriv(C_new(:,1),1)),1),'k')
-figure
-plot(w_xu,(deriv(C_new(:,1),1).^2),'g')
-figure
-plot(w_xu,deriv(deriv(C_new(:,2),1),1),'k')
-  
+%Blend that curve again to generate diverging end
+bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
+blendWL=bl;               %% Assign blending function
+w_yu= w_yu + blendWL.*(yTEuC-w_yu);
+clearvars lam bl bl_ a b c d blendWL
+plot(w_xu,w_yu,'-r')
+daspect([1 1 1])
+%Generate equidistant curve for later
+w_yu2=w_yu-s_TE;
+
 % Create lower line
-
 % Generate the x-coordinates of the lower line in the same way as for the
 %     upper one
 x_c2  = C2(:,1);
@@ -1110,88 +1108,49 @@ ddydxC2=dyC2./dxC2.*deriv((1./dxC2),1)+ddyC2./((dxC2).^2);
 %   extension curve, so that the upper and lower extension end with the
 %   same x-coordinate in the wake. That ensures that the eta-gridlines
 %   after this trasition region will be vertical
-lam=[1:N_discrW-2];
-a=-2/( 2*((1-size(lam,2)^3)-3*(1-size(lam,2))) - ((1-size(lam,2)^2)-2*(1-size(lam,2)))*3*(1+size(lam,2)) );
-b=-a*(3*(1+size(lam,2)))/2;
-c=-3*a-2*b;
-d=-a-b-c;
-bl_=a*lam.^3+b*lam.^2+c*lam+d;
-bl(1:1)=0;
-bl(1+1:size(lam,2)+1)=bl_;
-bl(size(lam,2)+1+1)=1;
-blendWL=bl;               %% Assign blending function
-blendWL(size(bl,2)+1:size(w_xu,2))=1;
+bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
+blendWL=bl;% Assign blending function
 w_xl= w_xl_ + blendWL.*(w_xl_2-w_xl_);
 clearvars lam bl bl_ a b c d blendWL
-%little check:
-figure
- plot(w_xu)
- hold on
- plot(w_xl)
- plot(w_xl_)
- plot(w_xl_2)
 
 %Calculate the y-coordinate of the lower extension again by a polinomial
-w_yl_=Poly6_sL(N_discrW/Nk,w_xl(1:N_discrW/Nk),yTE2,yTE2,dydxC2(end),0,ddydxC2(end),0,0,'f');
+w_yl_=Poly6_sL(N_discrW/Nk,w_xl(1:N_discrW/Nk),yTE2,yw2,dydxC2(end),0,ddydxC2(end),0,0,'f');
 w_yl_(N_discrW/Nk:size(w_xl,2))=w_yl_(N_discrW/Nk);
-%......and quickly check it in between:
- C_test2(:,1)=C2(:,1);
- C_test2(:,2)=C2(:,3);
- C_test2(size(C2,1)+1:size(C2,1)+size(w_xl,2)-1,1)=w_xl(1,2:end);
- C_test2(size(C2,1)+1:size(C2,1)+size(w_xl,2)-1,2)=w_yl_(1,2:end);
- C_new2(:,1)=w_xl(1,1:end);
- C_new2(:,2)=w_yl_(1,1:end);
- figure
-  plot(C_test2(:,1),deriv(deriv(C_test2(:,2),1),1)./(deriv(C_test2(:,1),1).^2)+deriv(C_test2(:,2),1)./deriv(C_test2(:,1),1).*deriv(1./(deriv(C_test2(:,1),1)),1),'b')
-  hold on
-  plot(x_c2,deriv(deriv(C2(:,3),1),1)./(deriv(C2(:,1),1).^2)+deriv(C2(:,3),1)./deriv(C2(:,1),1).*deriv(1./(deriv(C2(:,1),1)),1),'r')
-  plot(x_c2,ddydxC2, 'g')
-  plot(w_xl,deriv(deriv(C_new2(:,2),1),1)./(deriv(C_new2(:,1),1).^2)+deriv(C_new2(:,2),1)./deriv(C_new2(:,1),1).*deriv(1./(deriv(C_new2(:,1),1)),1),'k')
-lam=[1:N_discrW/Nk];
-delay=10 %Can be modified keep the first points as perfect polynomial extensions 
-a=-2/( 2*((1-size(lam,2)^3)-3*(1-size(lam,2))) - ((1-size(lam,2)^2)-2*(1-size(lam,2)))*3*(1+size(lam,2)) );
-b=-a*(3*(1+size(lam,2)))/2;
-c=-3*a-2*b;
-d=-a-b-c;
-bl_=a*lam.^3+b*lam.^2+c*lam+d;
-bl(1:delay)=0;
-bl(delay+1:size(lam,2)+delay)=bl_;
-bl(size(lam,2)+delay+1)=1;
-blendWL=bl;               %% Assign blending function
-blendWL(size(bl,2)+1:size(w_xu,2))=1;
-w_yl= w_yl_ + blendWL.*(yTE2-w_yl_);
+plot(w_xl,w_yl_)
+daspect([1 1 1])
+%Blend with equidistant curve to upper extension
+blendWL=Poly6_end(N_discrW/Nk_low,0,1,0,0,0,0,0,'f');
+blendWL(N_discrW/Nk_low:size(w_xl,2))=blendWL(end);
+w_yl=w_yl_ + blendWL.*(w_yu2-w_yl_);
+plot(w_xl,w_yu2)
+plot(w_xl,w_yl)
 clearvars lam bl bl_ a b c d blendWL
-
-% Blend both curves on the upper and lower side with a horizontal line 
-%   that corresponds to the y-coordinates at the end of the diverging part
-%   --> yTEuC & yTElC
-lam=[1:N_discrW-15];
-delay=10
-a=-2/( 2*((1-size(lam,2)^3)-3*(1-size(lam,2))) - ((1-size(lam,2)^2)-2*(1-size(lam,2)))*3*(1+size(lam,2)) );
-b=-a*(3*(1+size(lam,2)))/2;
-c=-3*a-2*b;
-d=-a-b-c;
-bl_=a*lam.^3+b*lam.^2+c*lam+d;
-bl(1:delay)=0;
-bl(delay+1:size(lam,2)+delay)=bl_;
-bl(size(lam,2)+delay+1)=1;
-blendWL=bl;               %% Assign blending function
-blendWL(size(bl,2)+1:size(w_xu,2))=1;
-w_yu= w_yu + blendWL.*(yTEuC-w_yu);
+%Blend that curve again to generate diverging end
+bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
+blendWL=bl;%% Assign blending function
 w_yl= w_yl + blendWL.*(yTElC-w_yl);
 clearvars lam bl bl_ a b c d blendWL
-%....of course not forget to check also that final step:
-figure
- plot(C_test(:,1),C_test(:,2),'--b')
- hold on
- plot(w_xl,w_yl_,'--r')
- plot(w_xu,w_yu,'b')
- plot(w_xl,w_yl,'r')
- daspect([1 1 1])
- hold on
- plot(C1(:,1),C1(:,3),'g')
- plot(C2(:,1),C2(:,3),'g')
+plot(w_xl,w_yl,'-r')
 
+%......and quickly check it in between:
+clearvars C_test1
+C_test1(:,1)=C1(:,1);
+C_test1(:,2)=C1(:,3);
+C_test1(size(C1,1)+1:size(C1,1)+size(w_xu,2)-1,1)=w_xu(1,2:end);
+C_test1(size(C1,1)+1:size(C1,1)+size(w_xu,2)-1,2)=w_yu(1,2:end);
+C_new1(:,1)=w_xu(1,1:end);
+C_new1(:,2)=w_yu(1,1:end);
+figure
+plot(C_test1(:,1),deriv(deriv(C_test1(:,2),1),1)./(deriv(C_test1(:,1),1).^2)+deriv(C_test1(:,2),1)./deriv(C_test1(:,1),1).*deriv(1./(deriv(C_test1(:,1),1)),1),'b')
+
+C_test2(:,1)=C2(:,1);
+C_test2(:,2)=C2(:,3);
+C_test2(size(C2,1)+1:size(C2,1)+size(w_xl,2)-1,1)=w_xl(1,2:end);
+C_test2(size(C2,1)+1:size(C2,1)+size(w_xl,2)-1,2)=w_yl_(1,2:end);
+C_new2(:,1)=w_xl(1,1:end);
+C_new2(:,2)=w_yl_(1,1:end);
+figure
+plot(deriv(deriv(C_test2(:,2),1),1)./(deriv(C_test2(:,1),1).^2)+deriv(C_test2(:,2),1)./deriv(C_test2(:,1),1).*deriv(1./(deriv(C_test2(:,1),1)),1),'b')
 'continuous airfoil extension generated'
 %%   Discretisation of airfoil extension and corresponding outer domain bound
 close all
@@ -1620,7 +1579,7 @@ if 1==1 %(No changes here)
 end % Generate Shape (No input needed)
 %
 % Specify distribution
-Style=3 % <-- Chose Version 1/2/3
+Style=2 % <-- Chose Version 1/2/3
 %
 %Version 1: Simplest version
 if Style==1
@@ -1694,8 +1653,7 @@ if Style==3
 end
 figure
 plot(s_JJ,deriv(s_JJ',1))
-
-%% Saving Parameters 
+%%   Saving Parameters 
 control_dist1=control_dist;
 prof_deriv1_wall1=prof_deriv1_wall;
 prof_deriv2_wall1=prof_deriv2_wall;
@@ -1809,7 +1767,7 @@ if Style==3
 end
 figure
 plot(s_JJ,deriv(s_JJ',1))
-%% Saving Parameters 
+%%   Saving Parameters 
 control_dist2=control_dist;
 prof_deriv1_wall2=prof_deriv1_wall;
 prof_deriv2_wall2=prof_deriv2_wall;
@@ -1934,7 +1892,7 @@ if Style==3
 end
 figure
 plot(s_JJ,deriv(s_JJ',1))
-%% Saving Parameters 
+%%   Saving Parameters 
 control_dist3=control_dist;
 prof_deriv1_wall3=prof_deriv1_wall;
 prof_deriv2_wall3=prof_deriv2_wall;
@@ -2907,7 +2865,7 @@ B3=load('Bl3.dat');
 %global TE LE n2i n2j n1i n1j
 TE=NTEw %Resolution of blunt Trailing edge
 LE=size(Ic2,1)+size(Ic4,1)-2   %Position of Leading in Block 2 
-n2i=size(C_tot,1)-2
+n2i=size(C_tot,1) %-2
 n2j=Ny1+Ny2-1
 n1i=Nw-1
 n1j=n2j+TE/2-1
