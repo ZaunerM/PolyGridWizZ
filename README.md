@@ -2,7 +2,9 @@
 for Matlab 8.6.0.267246 (R2015b)
 
 Polynomial Gridgeneration Wizzard for creating structured grids around airfoils with blunt and sharp trailing edges
-Developed by Markus Zauner and Neil Sandham
+
+Developed by Markus Zauner and Neil Sandham.
+
 Corresponding author: Markus Zauner (m.zauner@soton.ac.uk)
 
 Please cite this code corresponding to: 
