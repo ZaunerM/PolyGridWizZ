@@ -720,18 +720,24 @@ const_line2=round(N_discr*0.1);     % Force number of points being on top-optimi
 blend_C=round(Nc2*0.25)             % Number of points left & right of LE which are uesed for a blending
 %--------------------------------------------------------------------------
 %Overrule parameters here
+prof_deriv1_wall1=3e-4
+prof_deriv1_wall2=5e-4
+prof_deriv1_wall3=1e-3
+prof_deriv1_top1=0.02
+prof_deriv1_top2=0.02
+prof_deriv1_top3=0.02
 
-% %Those parameters are just for the default blunt trailing edge
-Nk=20 %recommended as default for sharp trailing edge: Nk=10
-StretchW_=5 % default as 1 means no stretching (used for sharp TE)
-StretchW=5  % default as 1 means no stretching (used for sharp TE)
-Nk_low=Nk*5 % For blunt trailing edge the control factor can be adjusted separately
+%Those parameters are just for the default blunt trailing edge
+% Nk=20 %recommended as default for sharp trailing edge: Nk=10
+% StretchW_=5 % default as 1 means no stretching (used for sharp TE)
+% StretchW=5  % default as 1 means no stretching (used for sharp TE)
+% Nk_low=Nk*5 % For blunt trailing edge the control factor can be adjusted separately
 
 %Those parameters are just for the default sharp trailing edge
-% Nk=10
-% StretchW_=1
-% StretchW=1  
-% Nk_low=Nk
+Nk=10
+StretchW_=1
+StretchW=1  
+Nk_low=Nk
 %--------------------------------------------------------------------------
 %% Start calculation of airfoil surface
 %%   Discretisation of trailing edge (TE) 
@@ -1579,7 +1585,7 @@ if 1==1 %(No changes here)
 end % Generate Shape (No input needed)
 %
 % Specify distribution
-Style=2 % <-- Chose Version 1/2/3
+Style=1 % <-- Chose Version 1/2/3
 %
 %Version 1: Simplest version
 if Style==1
@@ -1620,7 +1626,7 @@ if Style==2 || Style==3
     if sharp == false
         prof_deriv1_wall=djTE
     end
-    s_JJ=Poly6_Jend(NyTOT,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv2_top,'t');
+    s_JJ=Poly6_Jend(NyTOT,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv3_top,'t');
     figure
     plot(s_JJ,deriv(s_JJ',1))
 end % <-- Set Spacing
@@ -1630,8 +1636,8 @@ if Style==3
     suggest='t'
     if suggest=='t'
         control_dist=0.05 %control_dist3
-        index=find(abs(s_JJ-control_dist)<0.001) % <-- Default for Ny1
-        %index=40 % <-- if Ny1 is already fix defined
+        %index=find(abs(s_JJ-control_dist)<0.001) % <-- Default for Ny1
+        index=125 % <-- if Ny1 is already fix defined
         Ny1=index(end)
         Ny2=NyTOT-index(end)+1
         control_dist=s_JJ(index(end))
@@ -1641,7 +1647,7 @@ if Style==3
         prof_deriv2_cont=dds_JJ(index(end));
     end
     % Fine-tuning for Version 3: Takes a bit of playing around
-    draft='t'
+    draft='f'
     if draft=='t'
         index=125
         Ny1=index
@@ -1737,7 +1743,7 @@ if Style==2 || Style==3
         prof_deriv2_wall=0
         prof_deriv3_wall=0
     end
-    s_JJ=Poly6_Jend(NyTOT,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv2_top,'t');
+    s_JJ=Poly6_Jend(NyTOT,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv3_top,'t');
 end % <-- Set Spacing
 % First draft for Version 3
 if Style==3
@@ -1788,7 +1794,7 @@ prof_deriv2_wall=prof_deriv2_wall3;
 prof_deriv3_wall=prof_deriv3_wall3;
 prof_deriv1_cont=prof_deriv1_cont3;
 prof_deriv2_cont=prof_deriv2_cont3;
-prof_deriv1_top=prof_deriv1_top3*0.5;
+prof_deriv1_top=prof_deriv1_top3;
 prof_deriv2_top=prof_deriv2_top3;
 prof_deriv3_top=prof_deriv3_top3;
 %
@@ -1852,14 +1858,12 @@ if Style==2 || Style==3
         prof_deriv2_wall=prof_deriv2_wall
         prof_deriv3_wall=prof_deriv3_wall
     end
-    s_JJ=Poly6_Jend(Ny1+Ny2-1,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv2_top,'t');
+    s_JJ=Poly6_Jend(Ny1+Ny2-1,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv3_top,'t');
 end % <-- Set Spacing
 % First draft for Version 3
 if Style==3
     suggest='t'
     if suggest=='t'
-        prof_deriv1_top=prof_deriv1_top1*0.5;
-        prof_deriv1_wall=prof_deriv1_wall3*0.5;
         %control_dist=0.05
         %index=find(abs(s_JJ-control_dist)<0.01) % <-- Index must agree with other positions
         index=125 %index(end)
@@ -1868,30 +1872,23 @@ if Style==3
         control_dist=s_JJ(index)
         ds_JJ=deriv(s_JJ',1);
         prof_deriv1_cont=ds_JJ(index);
-        prof_deriv1_cont=prof_deriv1_cont
+        prof_deriv1_cont=prof_deriv1_cont;
         dds_JJ=deriv(ds_JJ,1);
         prof_deriv2_cont=dds_JJ(index);
-        prof_deriv1_wall=prof_deriv1_wall3*0.5;
     end
     % Fine-tuning for Version 3: Takes a bit of playing around
     draft='t'
     if draft=='t'
-%         Ny1=Ny1
-%         Ny2=NyTOT+1-Ny1
-%         control_dist=control_dist
-          prof_deriv1_top=prof_deriv1_top1
-%         prof_deriv2_top=prof_deriv2_top
-%         prof_deriv3_top=prof_deriv3_top
-%         prof_deriv1_wall=prof_deriv1_wall
-%         prof_deriv2_wall=prof_deriv2_wall
-%         prof_deriv3_wall=prof_deriv3_wall
-%         prof_deriv1_cont=prof_deriv1_cont
-%         prof_deriv2_cont=prof_deriv2_cont
+          prof_deriv1_wall=prof_deriv1_wall3;
+          prof_deriv1_top=prof_deriv1_top3
     end
     s_JJ=Poly_J(Ny1(1),Ny2(1),0,control_dist(1),s_GL(end),prof_deriv1_wall,prof_deriv1_cont(1),prof_deriv1_top,prof_deriv2_wall,prof_deriv2_cont(1),prof_deriv2_top,'t');
 end
 figure
 plot(s_JJ,deriv(s_JJ',1))
+
+figure
+plot(s_JJ)
 %%   Saving Parameters 
 control_dist3=control_dist;
 prof_deriv1_wall3=prof_deriv1_wall;
@@ -1903,6 +1900,26 @@ prof_deriv1_top3=prof_deriv1_top;
 prof_deriv2_top3=prof_deriv2_top;
 prof_deriv3_top3=prof_deriv3_top;
 'LE defined'
+%%   EPS FIGURES in order to compare grids (just uncomment, if needed)
+figure
+axes1 = axes('Parent',figure);
+hold(axes1,'on');
+box(axes1,'on');
+set(axes1,'YTick',...
+[0 0.002 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.022]);
+plot(s_JJ,deriv(s_JJ',1))
+ylim(axes1,[0 0.022]);
+xlim(axes1,[0 7.5]);
+
+figure
+axes1 = axes('Parent',figure);
+hold(axes1,'on');
+box(axes1,'on');
+set(axes1,'YTick',...
+[0 0.002 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.022]);
+plot(deriv(s_JJ',1))
+ylim(axes1,[0 0.022]);
+xlim(axes1,[1 689]);
 %%   Generate Distribution function (no input needed)
 prof_deriv1_wall(1:size(Ic2,1)) = Poly6_s(size(Ic2,1),0,xTElt-0.5,prof_deriv1_wall1,prof_deriv1_wall2,0,0,0,0,0,'f');
 prof_deriv1_wall(size(Ic2,1):size(Ic2,1)+size(Ic4,1)-1) = Poly6_s(size(Ic4,1),0,0.5-xq,prof_deriv1_wall2,prof_deriv1_wall3,0,0,0,0,0,'f');
@@ -2128,7 +2145,7 @@ end
 
 '--- Ready for generating Block 2 ---'
 stop
-%% Loop trough every point in xi-direction
+%% Loop trough every point in xi-direction (This can take a while)
 %%      Test Loop for Block 2 
 
 %Just copy the section Generate Block 2 and plot whatever you want
