@@ -9,7 +9,8 @@
 %%%    Corresponding author:      Markus Zauner        %%%
 %%%                           m.zauner@soton.ac.uk     %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%for Matlab 8.6.0.267246 (R2015b)                    %%%
+%%%  developed for Matlab 8.6.0.267246 (R2015b)        %%%
+%%%     tested for Matlab 9.4.0.813654 (R2018a)        %%%
 %% INTRODUCTION
 %
 % Supporting comments by Markus Zauner 
@@ -18,12 +19,13 @@
 % This code is a beta version for airfoils with a blunt and sharp trailing edge
 % for Matlab 8.6.0.267246 (R2015b)
 %
-% The final version is supposed to contain following features:
+% The version 1.0.0 is supposed to contain following features:
 % - parallelised 2D grid generation
 % - optimised modular structure
-% - open-source version written in Python
+% - open-source version written in Python (www.Jupyter.org)
+% - gridline-intersection check
 % _________________________________________________________________________
-% Please cite this code corresponding to: 
+% Please cite this code referring to: 
 % Proceedings of the 10th International Conference on Computational Fluid Dynamics (ICCFD10)
 % "Multiblock structured grids for direct numerical simulations of transonic wing sections"
 % Zauner, M. and Sandham, N. D., 2018
@@ -31,23 +33,28 @@
 % _________________________________________________________________________
 %% Guide:
 %-1. It might be useful to use version control (e.g. Bitbucket) to track changes of your grid
-% 0. First at all, we recommend to fold all (CTRL+=)
+% 0. First at all, we recommend to fold all sections (CTRL+=)
 % 1. Set parameters in P1, P2 & P3 
+%    In the case of NACA profiles, the four digits are specified in P1
 % 2. Check inputs in I1 and correct them by commenting A(i) out
 %    After the final input file was safed before generating the full grid, 
 %    A(i) can uncommented again.
 % 3. In case you add new parameters you can either add them to I2 or extend
 % the input file in I1 and F1 -> see sec I1 for more details
+%    I2 also allows to overrule parameters in case you want to make sure
+%    they won't change. In that example the eta-spacing at the wall and outer 
+%    bound are hardcoded in I2
 % 4. Run now every single section separately and check results carefully.
-%    It might be necessary to do several iterations
+%    It might be necessary to do several iterations to optimise the grid
 %    --> That's the price you pay for a fully flexible grid generation.
-%        Therefore you should think carefully how you want your grid to
+%        Therefore you should think carefully what you want your grid to
 %        look like and what resolution you aim for.
 %
 %    If you change the resolution or other parameters that are coupled to
 %    sections that were executed before, you have to rerun the code. In
-%    that case, (1) save the input file by executing the corresponding section 'S1' and (2) put a 'stop' command after the recent section and run the
-%    whole code (F5). When you reach the 'stop', you can continue.
+%    that case, (1) save the input file by executing the corresponding section 
+%    'S1' and (2) put a 'stop' command after the recent section and (3) 
+%    run the whole code (F5). When you reach the 'stop', you can continue.
 % 5. Contour 1-4 are the segments on the airfoil surface.
 %    Functions Poly6 and Poly6_end are applied to calculate spacing.
 %      The third derivative is a control parameter and applied at the first point
@@ -58,7 +65,9 @@
 %      it back to draft='F'. 
 %    Please mind that each segment (C1-C4) is coupled with others. It might
 %      take you some iterations to find the best settings for C1-C4
-% 6. Go through each matlab-section and follow the instructions
+% 6. The eta-gridlines are designed at representative locations either by
+%    one polynomial (Style 1&2) ord by more polynomials (Style 3). Please
+%    find an example for the design process in the corresponding paper.
 % 7. Before generating the full grid, test the C-block in section T1
 % 8. Generate Block 2 by executing E1
 % 9. Then execute 
@@ -95,7 +104,7 @@ sharp=true            % true  -> sharp trailing edge
     m = 4/100;           % First digit
     p = 4/10;            % Second digit
     t=12/100;            % Third and fourth digits
-    c = 1.0;             % Chord lenght
+    cx = 1.0;             % Chord lenght
     ncheck = 100000;     % Resolution of raw profile -----> Check later variable 'space'<<smallest cell
     sang = 0.0;          % Sweep angle (degrees) <-- NOT TESTED
     sang = sang/180*pi;
@@ -117,11 +126,11 @@ if sharp==false && readfiles==false
     xlck = linspace(0,1,ncheck);
     ylck = linspace(0,1,ncheck);
     slck = linspace(0,1,ncheck);
-
-    ytck = t/0.2*c*( 0.2969*sqrt(xck/c)+(-0.1260*xck/c)+(-0.3516*(xck/c).^2)+0.2843*(xck/c).^3+(-0.1015)*(xck/c).^4 );
+    
+    ytck = t/0.2*( 0.2969*sqrt(xck)+(-0.1260*xck)+(-0.3516*(xck).^2)+0.2843*(xck).^3+(-0.1015)*(xck).^4 );
 
     for i=2:ncheck
-        if(xck(i) <= p*c)
+        if(xck(i) <= p)
             yc = m*xck(i)/(p^2)*(2*p-xck(i));
             dycdx = 2*m/(p^2)*(p-xck(i));
         else
@@ -131,16 +140,10 @@ if sharp==false && readfiles==false
 
         yuck(i) = yc+ytck(i)*cos(atan(dycdx));
         xuck(i) = xck(i)*cos(sang)-ytck(i)*sin(atan(dycdx));
-%         if xuck(i)<0
-%             xuck(i)=0;
-%         end
         suck(i) = suck(i-1)+sqrt((yuck(i)-yuck(i-1))^2+(xuck(i)-xuck(i-1))^2);
         %
         ylck(i) = yc-ytck(i)*cos(atan(dycdx));
         xlck(i) = xck(i)*cos(sang)+ytck(i)*sin(atan(dycdx));
-%         if xlck(i)<0
-%             xlck(i)=0;
-%         end
         slck(i) = slck(i-1)+sqrt((ylck(i)-ylck(i-1))^2+(xlck(i)-xlck(i-1))^2);
     end
     
@@ -175,14 +178,14 @@ if sharp==false && readfiles==false
         i=i+1;
     end
 
-    C1(:,1)=xu_fin(nu_break:end);
-    C1(:,3)=yu_fin(nu_break:end);
-    C2(:,1)=xl_fin(nl_break:end);
-    C2(:,3)=yl_fin(nl_break:end);
-    C3(:,1)=xu_fin(1:nu_break);
-    C3(:,3)=yu_fin(1:nu_break);
-    C4(:,1)=xl_fin(1:nl_break);
-    C4(:,3)=yl_fin(1:nl_break);
+    C1(:,1)=xu_fin(nu_break:end).*cx;
+    C1(:,3)=yu_fin(nu_break:end).*cx;
+    C2(:,1)=xl_fin(nl_break:end).*cx;
+    C2(:,3)=yl_fin(nl_break:end).*cx;
+    C3(:,1)=xu_fin(1:nu_break).*cx;
+    C3(:,3)=yu_fin(1:nu_break).*cx;
+    C4(:,1)=xl_fin(1:nl_break).*cx;
+    C4(:,3)=yl_fin(1:nl_break).*cx;
     
     figure
     plot(C1(:,1),C1(:,3),'r')
@@ -204,7 +207,7 @@ if sharp==true
     ytck = t/0.2*( 0.2969*sqrt(xck)+(-0.1260*xck)+(-0.3516*(xck).^2)+0.2843*(xck).^3+(-0.1036)*(xck).^4 );
     
     for i=2:ncheck
-        if(xck(i) <= p*c)
+        if(xck(i) <= p)
             yc = m*xck(i)/(p^2)*(2*p-xck(i));
             dycdx = 2*m/(p^2)*(p-xck(i));
         else
@@ -214,16 +217,10 @@ if sharp==true
 
         yuck(i) = yc+ytck(i)*cos(atan(dycdx));
         xuck(i) = xck(i)*cos(sang)-ytck(i)*sin(atan(dycdx));
-%         if xuck(i)<0
-%             xuck(i)=0;
-%         end
         suck(i) = suck(i-1)+sqrt((yuck(i)-yuck(i-1))^2+(xuck(i)-xuck(i-1))^2);
         %
         ylck(i) = yc-ytck(i)*cos(atan(dycdx));
         xlck(i) = xck(i)*cos(sang)+ytck(i)*sin(atan(dycdx));
-%         if xlck(i)<0
-%             xlck(i)=0;
-%         end
         slck(i) = slck(i-1)+sqrt((ylck(i)-ylck(i-1))^2+(xlck(i)-xlck(i-1))^2);
     end
     
@@ -258,14 +255,14 @@ if sharp==true
         i=i+1;
     end
 
-    C1(:,1)=xu_fin(nu_break:end);
-    C1(:,3)=yu_fin(nu_break:end);
-    C2(:,1)=xl_fin(nl_break:end);
-    C2(:,3)=yl_fin(nl_break:end);
-    C3(:,1)=xu_fin(1:nu_break);
-    C3(:,3)=yu_fin(1:nu_break);
-    C4(:,1)=xl_fin(1:nl_break);
-    C4(:,3)=yl_fin(1:nl_break);
+    C1(:,1)=xu_fin(nu_break:end).*cx;
+    C1(:,3)=yu_fin(nu_break:end).*cx;
+    C2(:,1)=xl_fin(nl_break:end).*cx;
+    C2(:,3)=yl_fin(nl_break:end).*cx;
+    C3(:,1)=xu_fin(1:nu_break).*cx;
+    C3(:,3)=yu_fin(1:nu_break).*cx;
+    C4(:,1)=xl_fin(1:nl_break).*cx;
+    C4(:,3)=yl_fin(1:nl_break).*cx;
     
     figure
     plot(C1(:,1),C1(:,3),'r')
@@ -299,7 +296,7 @@ clearvars CC CCnew sCCnew sCC
 %% P2: Setting angle of attack   (User settings required)
 
 % Rotate Profile
-a_deg = 5.0;                  % Angle of attack (degrees)
+a_deg = 4.0;                  % Angle of attack (degrees)
 xor   = 0.5;                  % X-Position of rotation axis
 yor   = 0.0;                  % Y-Position of rotation axis
 % Perform calculation
@@ -437,9 +434,10 @@ xq=C3(1,1);
 'Contour rotated to adjust angle of attack'
 %% P3: Basic domain settings
 %
-rad    = 7.3;            % Radius of half circle
+rad    = 7.3;           % Radius of half circle
 x_circ = 0.5;           % X-Coordinate of center of half circle
 y_circ = 0.0;           % Y-Coordinate of center of half circle
+%
 xOut     =5.5;          % X-position of outlet
 %
 xTEu     = C1(end,1);   % X-Position of upper TE
@@ -742,7 +740,7 @@ Nk_low=Nk
 %% Start calculation of airfoil surface
 %%   Discretisation of trailing edge (TE) 
 if sharp==false
-    a_deg=a_deg+a_rad_offset;
+    a_deg =  a_deg+a_rad_offset;
     y_TE  =  linspace(yTE2,yTE1,NTEw);
     x_TE  =  xTEl+(xTEu-xTEl)/(yTE1-yTE2)*(y_TE-yTE2);
     s_TE  =  sqrt((xTEu-xTEl)^2+(yTE1-yTE2)^2);
@@ -1216,7 +1214,7 @@ if sharp == false
         
         %plot(s_CwuTEST,deriv(s_CwuTEST',1))
         clear vars s_CwuTEST
-        %stop
+        stop
     end
         
     %Carry out interpolation for upper side
@@ -1585,7 +1583,7 @@ if 1==1 %(No changes here)
 end % Generate Shape (No input needed)
 %
 % Specify distribution
-Style=1 % <-- Chose Version 1/2/3
+Style=1 % <-- Choose Version 1/2/3
 %
 %Version 1: Simplest version
 if Style==1
@@ -2967,12 +2965,14 @@ end
 daspect([1 1 1])
 
 %% Processor calculator
+% This script suggests numbers of processors per block
+%--------------------------------------------------------------------------
+Node_in     =   60 % Nodes preferred 
+%                    --> results will be filtered accordingly in output_new
+npp         =   16 % Processors per node
+%--------------------------------------------------------------------------
+Node_range  =   round(Node_in*0.25); 
 close all
-
-Node_in     =   60   % Nodes preferred --> results will be filtered accordingly in output_new
-Node_range  =   round(Node_in*0.25);  % 
-npp         =   16   % Processors per node
-
 % Block 1 
 i1=(Nw-1);                  % Number of Points in xi
 j1=(Ny1+Ny2-1+NTEw/2-1);    % Number of Points in eta
