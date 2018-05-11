@@ -8,6 +8,7 @@ Developed by Markus Zauner and Neil Sandham.
 Corresponding author: Markus Zauner (m.zauner@soton.ac.uk)
 
 Please acknowledge us by citing: 
+
 Proceedings of the 10th International Conference on Computational Fluid Dynamics (ICCFD10)
 "Multiblock structured grids for direct numerical simulations of transonic wing sections"
 Zauner, M. and Sandham, N. D., 2018
