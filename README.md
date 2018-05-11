@@ -1,7 +1,7 @@
 # PolyGridWizZ_v0.0.1-beta
 Tested for Matlab 8.6.0.267246 (R2015b) and Matlab 9.4.0.813654 (R2018a)
 
-Polynomial Gridgeneration Wizzard for creating structured grids around airfoils with blunt and sharp trailing edges
+Polynomial Gridgeneration Wizzard for creating structured grids around airfoils with blunt and sharp trailing edges.
 
 Developed by Markus Zauner and Neil Sandham.
 
