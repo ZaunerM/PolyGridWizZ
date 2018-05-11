@@ -13,4 +13,6 @@ Proceedings of the 10th International Conference on Computational Fluid Dynamics
 Zauner, M. and Sandham, N. D., 2018
 Paper ID: ICCFD10-2018-129
 
+The DOI of the current beta-version 0.0.1 is https://zenodo.org/badge/latestdoi/112736155
+
 Execute and follow instructions: PolyGridWizZ_v001_beta.m
