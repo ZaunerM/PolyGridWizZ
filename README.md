@@ -1,5 +1,5 @@
 # PolyGridWizZ (Polynomial Gridgeneration Wizard)
-Crafting structured multiblock hifh-fidelity grids around airfoils with blunt and sharp trailing edges.
+Crafting structured multiblock high-fidelity grids around airfoils with blunt and sharp trailing edges.
 
 # PolyGridWizZ_v0.0.1-beta
 Tested for Matlab 8.6.0.267246 (R2015b) and Matlab 9.4.0.813654 (R2018a)
