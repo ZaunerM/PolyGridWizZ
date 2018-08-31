@@ -195,7 +195,7 @@ if sharp==false && readfiles==false
     plot(C4(:,1),C4(:,3),'k')
     daspect([1 1 1])
 end
-if sharp==true
+if sharp==true && readfiles==false
     xck = linspace(0,1,ncheck);
     xuck = linspace(0,1,ncheck);
     yuck = linspace(0,1,ncheck);
