@@ -9,8 +9,7 @@
 %%%    Corresponding author:      Markus Zauner        %%%
 %%%                           m.zauner@soton.ac.uk     %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  developed for Matlab 8.6.0.267246 (R2015b)        %%%
-%%%     tested for Matlab 9.4.0.813654 (R2018a)        %%%
+%%%for Matlab 8.6.0.267246 (R2015b)                    %%%
 %% INTRODUCTION
 %
 % Supporting comments by Markus Zauner 
@@ -19,13 +18,12 @@
 % This code is a beta version for airfoils with a blunt and sharp trailing edge
 % for Matlab 8.6.0.267246 (R2015b)
 %
-% The version 1.0.0 is supposed to contain following features:
+% The final version is supposed to contain following features:
 % - parallelised 2D grid generation
 % - optimised modular structure
-% - open-source version written in Python (www.Jupyter.org)
-% - gridline-intersection check
+% - open-source version written in Python
 % _________________________________________________________________________
-% Please cite this code referring to: 
+% Please cite this code corresponding to: 
 % Proceedings of the 10th International Conference on Computational Fluid Dynamics (ICCFD10)
 % "Multiblock structured grids for direct numerical simulations of transonic wing sections"
 % Zauner, M. and Sandham, N. D., 2018
@@ -33,28 +31,23 @@
 % _________________________________________________________________________
 %% Guide:
 %-1. It might be useful to use version control (e.g. Bitbucket) to track changes of your grid
-% 0. First at all, we recommend to fold all sections (CTRL+=)
+% 0. First at all, we recommend to fold all (CTRL+=)
 % 1. Set parameters in P1, P2 & P3 
-%    In the case of NACA profiles, the four digits are specified in P1
 % 2. Check inputs in I1 and correct them by commenting A(i) out
 %    After the final input file was safed before generating the full grid, 
 %    A(i) can uncommented again.
 % 3. In case you add new parameters you can either add them to I2 or extend
 % the input file in I1 and F1 -> see sec I1 for more details
-%    I2 also allows to overrule parameters in case you want to make sure
-%    they won't change. In that example the eta-spacing at the wall and outer 
-%    bound are hardcoded in I2
 % 4. Run now every single section separately and check results carefully.
-%    It might be necessary to do several iterations to optimise the grid
+%    It might be necessary to do several iterations
 %    --> That's the price you pay for a fully flexible grid generation.
-%        Therefore you should think carefully what you want your grid to
+%        Therefore you should think carefully how you want your grid to
 %        look like and what resolution you aim for.
 %
 %    If you change the resolution or other parameters that are coupled to
 %    sections that were executed before, you have to rerun the code. In
-%    that case, (1) save the input file by executing the corresponding section 
-%    'S1' and (2) put a 'stop' command after the recent section and (3) 
-%    run the whole code (F5). When you reach the 'stop', you can continue.
+%    that case, (1) save the input file by executing the corresponding section 'S1' and (2) put a 'stop' command after the recent section and run the
+%    whole code (F5). When you reach the 'stop', you can continue.
 % 5. Contour 1-4 are the segments on the airfoil surface.
 %    Functions Poly6 and Poly6_end are applied to calculate spacing.
 %      The third derivative is a control parameter and applied at the first point
@@ -65,9 +58,7 @@
 %      it back to draft='F'. 
 %    Please mind that each segment (C1-C4) is coupled with others. It might
 %      take you some iterations to find the best settings for C1-C4
-% 6. The eta-gridlines are designed at representative locations either by
-%    one polynomial (Style 1&2) ord by more polynomials (Style 3). Please
-%    find an example for the design process in the corresponding paper.
+% 6. Go through each matlab-section and follow the instructions
 % 7. Before generating the full grid, test the C-block in section T1
 % 8. Generate Block 2 by executing E1
 % 9. Then execute 
@@ -88,7 +79,7 @@ readfiles=false       % true  -> Read in ascii-files of airfoil
                       % false -> Airfoil is defined by function
                         
 %Don't forget to set sharp=true in case of a sharp TE profile
-sharp=true            % true  -> sharp trailing edge
+sharp=false           % true  -> sharp trailing edge
                       % false -> blunt trailing edge
                         
 % READ-IN SETTINGS
@@ -101,10 +92,10 @@ sharp=true            % true  -> sharp trailing edge
     if sharp==true
         TE_thickness = 0
     end
-    m = 4/100;           % First digit
-    p = 4/10;            % Second digit
-    t=12/100;            % Third and fourth digits
-    cx = 1.0;             % Chord lenght
+    m = 3/100;           % First digit
+    p = 6/10;            % Second digit
+    t=11/100;            % Third and fourth digits
+    c = 1.0;             % Chord lenght
     ncheck = 100000;     % Resolution of raw profile -----> Check later variable 'space'<<smallest cell
     sang = 0.0;          % Sweep angle (degrees) <-- NOT TESTED
     sang = sang/180*pi;
@@ -116,6 +107,16 @@ if readfiles
     C2 = load(Contour2); %lower TE
     C3 = load(Contour3); %upper LE
     C4 = load(Contour4); %lower LE
+    
+    figure
+    plot(C1(:,1),C1(:,3),'r')
+    hold on
+    plot(C2(:,1),C2(:,3),'g')
+    plot(C3(:,1),C3(:,3),'b')
+    plot(C4(:,1),C4(:,3),'k')
+    daspect([1 1 1])
+    
+    
     'Contour read in'
 end
 if sharp==false && readfiles==false
@@ -126,11 +127,11 @@ if sharp==false && readfiles==false
     xlck = linspace(0,1,ncheck);
     ylck = linspace(0,1,ncheck);
     slck = linspace(0,1,ncheck);
-    
-    ytck = t/0.2*( 0.2969*sqrt(xck)+(-0.1260*xck)+(-0.3516*(xck).^2)+0.2843*(xck).^3+(-0.1015)*(xck).^4 );
+
+    ytck = t/0.2*c*( 0.2969*sqrt(xck/c)+(-0.1260*xck/c)+(-0.3516*(xck/c).^2)+0.2843*(xck/c).^3+(-0.1015)*(xck/c).^4 );
 
     for i=2:ncheck
-        if(xck(i) <= p)
+        if(xck(i) <= p*c)
             yc = m*xck(i)/(p^2)*(2*p-xck(i));
             dycdx = 2*m/(p^2)*(p-xck(i));
         else
@@ -140,10 +141,16 @@ if sharp==false && readfiles==false
 
         yuck(i) = yc+ytck(i)*cos(atan(dycdx));
         xuck(i) = xck(i)*cos(sang)-ytck(i)*sin(atan(dycdx));
+%         if xuck(i)<0
+%             xuck(i)=0;
+%         end
         suck(i) = suck(i-1)+sqrt((yuck(i)-yuck(i-1))^2+(xuck(i)-xuck(i-1))^2);
         %
         ylck(i) = yc-ytck(i)*cos(atan(dycdx));
         xlck(i) = xck(i)*cos(sang)+ytck(i)*sin(atan(dycdx));
+%         if xlck(i)<0
+%             xlck(i)=0;
+%         end
         slck(i) = slck(i-1)+sqrt((ylck(i)-ylck(i-1))^2+(xlck(i)-xlck(i-1))^2);
     end
     
@@ -153,10 +160,10 @@ if sharp==false && readfiles==false
         n_max=i;
         i=i+1;
     end
-            
+    
     [minxu1,minxu2]=min(xuck)
     [minxl1,minxl2]=min(xlck)
-    if minxu1 < minxl1
+    if minxu1 <= minxl1
         xu_fin=xuck(minxu2:end);
         yu_fin=yuck(minxu2:end);
         xl_fin=xuck(minxu2:-1:1);
@@ -173,19 +180,20 @@ if sharp==false && readfiles==false
         nu_break=i;
         i=i+1;
     end
+    i=1
     while xl_fin(i)<=0.5
         nl_break=i;
         i=i+1;
     end
 
-    C1(:,1)=xu_fin(nu_break:end).*cx;
-    C1(:,3)=yu_fin(nu_break:end).*cx;
-    C2(:,1)=xl_fin(nl_break:end).*cx;
-    C2(:,3)=yl_fin(nl_break:end).*cx;
-    C3(:,1)=xu_fin(1:nu_break).*cx;
-    C3(:,3)=yu_fin(1:nu_break).*cx;
-    C4(:,1)=xl_fin(1:nl_break).*cx;
-    C4(:,3)=yl_fin(1:nl_break).*cx;
+    C1(:,1)=xu_fin(nu_break:end);
+    C1(:,3)=yu_fin(nu_break:end);
+    C2(:,1)=xl_fin(nl_break:end);
+    C2(:,3)=yl_fin(nl_break:end);
+    C3(:,1)=xu_fin(1:nu_break);
+    C3(:,3)=yu_fin(1:nu_break);
+    C4(:,1)=xl_fin(1:nl_break);
+    C4(:,3)=yl_fin(1:nl_break);
     
     figure
     plot(C1(:,1),C1(:,3),'r')
@@ -195,7 +203,8 @@ if sharp==false && readfiles==false
     plot(C4(:,1),C4(:,3),'k')
     daspect([1 1 1])
 end
-if sharp==true && readfiles==false
+
+if sharp==true
     xck = linspace(0,1,ncheck);
     xuck = linspace(0,1,ncheck);
     yuck = linspace(0,1,ncheck);
@@ -207,7 +216,7 @@ if sharp==true && readfiles==false
     ytck = t/0.2*( 0.2969*sqrt(xck)+(-0.1260*xck)+(-0.3516*(xck).^2)+0.2843*(xck).^3+(-0.1036)*(xck).^4 );
     
     for i=2:ncheck
-        if(xck(i) <= p)
+        if(xck(i) <= p*c)
             yc = m*xck(i)/(p^2)*(2*p-xck(i));
             dycdx = 2*m/(p^2)*(p-xck(i));
         else
@@ -217,10 +226,16 @@ if sharp==true && readfiles==false
 
         yuck(i) = yc+ytck(i)*cos(atan(dycdx));
         xuck(i) = xck(i)*cos(sang)-ytck(i)*sin(atan(dycdx));
+%         if xuck(i)<0
+%             xuck(i)=0;
+%         end
         suck(i) = suck(i-1)+sqrt((yuck(i)-yuck(i-1))^2+(xuck(i)-xuck(i-1))^2);
         %
         ylck(i) = yc-ytck(i)*cos(atan(dycdx));
         xlck(i) = xck(i)*cos(sang)+ytck(i)*sin(atan(dycdx));
+%         if xlck(i)<0
+%             xlck(i)=0;
+%         end
         slck(i) = slck(i-1)+sqrt((ylck(i)-ylck(i-1))^2+(xlck(i)-xlck(i-1))^2);
     end
     
@@ -255,14 +270,14 @@ if sharp==true && readfiles==false
         i=i+1;
     end
 
-    C1(:,1)=xu_fin(nu_break:end).*cx;
-    C1(:,3)=yu_fin(nu_break:end).*cx;
-    C2(:,1)=xl_fin(nl_break:end).*cx;
-    C2(:,3)=yl_fin(nl_break:end).*cx;
-    C3(:,1)=xu_fin(1:nu_break).*cx;
-    C3(:,3)=yu_fin(1:nu_break).*cx;
-    C4(:,1)=xl_fin(1:nl_break).*cx;
-    C4(:,3)=yl_fin(1:nl_break).*cx;
+    C1(:,1)=xu_fin(nu_break:end);
+    C1(:,3)=yu_fin(nu_break:end);
+    C2(:,1)=xl_fin(nl_break:end);
+    C2(:,3)=yl_fin(nl_break:end);
+    C3(:,1)=xu_fin(1:nu_break);
+    C3(:,3)=yu_fin(1:nu_break);
+    C4(:,1)=xl_fin(1:nl_break);
+    C4(:,3)=yl_fin(1:nl_break);
     
     figure
     plot(C1(:,1),C1(:,3),'r')
@@ -274,6 +289,7 @@ if sharp==true && readfiles==false
 end
 'Raw contour generated'
 a_rad_offset=atan((C1(end,1)-C2(end,1))/(C1(end,3)-C2(end,3)))
+
 %
 % Redistribute points along surface
 CC=flipud(C2);
@@ -292,8 +308,60 @@ C3=CC(size(C2,1)+size(C4,1)-1:size(C2,1)+size(C4,1)-1+size(C3,1)-1,:);
 C1=CC(size(C2,1)+size(C4,1)-1+size(C3,1)-1:size(C2,1)+size(C4,1)-1+size(C3,1)-1+size(C1,1)-1,:);
 clearvars CC CCnew sCCnew sCC
 
+figure
+plot(C1(:,1),C1(:,3),'-r')
+%daspect([1 1 1])
+hold on
+plot(C2(:,1),C2(:,3),'-r')
+plot(C3(:,1),C3(:,3),'-r')
+plot(C4(:,1),C4(:,3),'-r')
+
+dx=C1(end,1)-C2(end,1)
+dy=C1(end,3)-C2(end,3)
+atan(dx/dy)*360/(2*pi)
+
+utarget=(TE_thickness-(C1(end,3)-C2(end,3)))/2
+ltarget=(TE_thickness-(C1(end,3)-C2(end,3)))/2
+
+blendF=Poly6(size(C1,1),0,1,0,0,0,0,0,'f').^1;
+C1(:,3)=C1(:,3)+blendF'.*utarget;
+blendF=Poly6(size(C2,1),0,1,0,0,0,0,0,'f').^1;
+C2(:,3)=C2(:,3)-blendF'.*ltarget;
+
+dx=C1(end,1)-C2(end,1)
+dy=C1(end,3)-C2(end,3)
+atan(dx/dy)*360/(2*pi)
+
+plot(C1(:,1),C1(:,3),'-b')
+plot(C2(:,1),C2(:,3),'-b')
+
+% figure 
+% plot(C1(:,1))
+% hold on
+% plot(C2(:,1))
+
+%a_rad_offset=atan((C1(end,1)-C2(end,1))/(C1(end,3)-C2(end,3)))
+blendF=Poly6(size(C1,1),0,1,0,0,0,0,0,'f').^1;
+utarget=C1(:,1)+blendF'.*(-C1(:,1)+C1(:,1)+1-C1(end,1))
+C1(:,1)=C1(:,1)+blendF'.*(-C1(:,1)+utarget)
+blendF=Poly6(size(C2,1),0,1,0,0,0,0,0,'f').^1;
+ltarget=C2(:,1)+blendF'.*(-C2(:,1)+C2(:,1)+1-C2(end,1))
+C2(:,1)=C2(:,1)+blendF'.*(-C2(:,1)+ltarget)
+
+a_rad_offset=atan((C1(end,1)-C2(end,1))/(C1(end,3)-C2(end,3)))
+% Correct trailing edge
+
+plot(C1(:,1),C1(:,3),'-k')
+plot(C2(:,1),C2(:,3),'-k')
+
+figure 
+plot(C2(:,1))
+
 'Equidistant resolution --->',space
 %% P2: Setting angle of attack   (User settings required)
+dx=C1(end,1)-C2(end,1)
+dy=C1(end,3)-C2(end,3)
+atan(dx/dy)*360/(2*pi)
 
 % Rotate Profile
 a_deg = 4.0;                  % Angle of attack (degrees)
@@ -429,15 +497,344 @@ if a_deg ~= 0.0
     plot(C3(:,1),C3(:,3),'-g')
     plot(C4(:,1),C4(:,3),'-g')
 end
+
+dx=C1(end,1)-C2(end,1)
+dy=C1(end,3)-C2(end,3)
+atan(dx/dy)*360/(2*pi)
+
+y_LE=0
+x_LE=0
+y_TE=-c*sin(a_deg)
+x_TE=c*cos(a_deg)
+TE_thickness/2
+x_TEu=x_TE+(TE_thickness/2)*sin(a_deg)
+x_TEl=x_TE-(TE_thickness/2)*sin(a_deg)
+y_TEu=y_TE+(TE_thickness/2)*cos(a_deg)
+y_TEl=y_TE-(TE_thickness/2)*cos(a_deg)
+
+C3(end,:)
+C1(1,:)
+
+[a,b]=max(C3)
+[aa,bb]=min(C4)
+scaleY=0.056778159/C3(b(3),3)
+scaleX=0.3358/C3(b(3),1)
+
+            %Ref  %MZ4646 <-> NACA3311
+pxu=0.3     %0.3   %0.3       %0.3 %0.27
+pyu=0.06    %0.06  %0.06      %0.0563
+
+pxl=0.6     %0.6   %0.4       %0.4196
+pyl=-0.06   %-0.06 %-0.06     %-0.0550
+
+roundx=0.3  %0.3
+roundy=0.06 %0.6
+
+TEangleU=3.5%3.5
+TEangleL=2  %2
+
+% Upper side
+N_discr_tot=100000
+N_C3=round(N_discr_tot*pxu)
+N_C1=N_discr_tot-N_C3
+
+figure
+plot(C3(:,1),C3(:,3));
+hold on
+
+N_discr=N_C3
+C3_=zeros(N_discr,3);
+if(pyu==roundy)
+    a_ell=pyu^2
+else
+    a_ell=Poly6(N_discr,roundy,pyu,0,0,0,0,0,'f')
+    plot(a_ell)
+    a_ell=a_ell'.^2;
+end
+if(pxu==roundx)
+    b_ell=pxu^2
+else
+    b_ell=Poly6(N_discr,roundx,pxu,0,0,0,0,0,'f')
+    plot(b_ell)
+    b_ell=b_ell'.^2;
+end
+
+psi_ell=linspace(0,pi/2,N_discr)
+x_ell=-cos(psi_ell).*roundx %C3(b(3),1);
+plot(x_ell)
+
+%asin(0.5/pxu)
+%x_ell=-(1-cos(psi_ell)).*pxu; %C3(b(3),1);
+
+% if(pxu>0.5)
+%     scale_disc=round(N_discr*(asin(0.5/pxu)/(pi/2)))
+%     psi_ell=linspace(0,asin(0.5/pxu),scale_disc)
+%     x_ell(1:scale_disc)=-sin(psi_ell).*pxu
+%     psi_ell=linspace(asin(0.5/pxu),pi/2,N_discr-scale_disc+1);
+%     x_ell(scale_disc:end)=-sin(psi_ell).*pxu;
+%     figure
+%     plot(x_ell)
+% end
+
+y_ell=a_ell'-(x_ell.^2).*a_ell'./b_ell';
+y_ell=(abs(y_ell).^(0.5));
+close all
+figure
+plot(y_ell)
+
+C3_(:,3)=(y_ell);
+x_ell=x_ell+roundx;
+%x_ell=x_ell/roundx*pxu
+x_ell=x_ell.*Poly6_end(N_discr,1,pxu/roundx,0,0,0,0,0,'f')
+plot(x_ell)
+C3_(:,1)=x_ell; %flip(x_ell);
+
+plot(C3_(:,1),C3_(:,3));
+
+% C3_=C3.*0;
+% figure
+% plot(C3(1:b(3),1));
+% N_discr=b(3);
+% a_ell=pyu^2 %C3(b(3),3)^2; %a_ell'.^2;
+% b_ell=pxu^2 %C3(b(3),1)^2; 
+% psi_ell=linspace(0,pi/2,N_discr);
+% x_ell=-sin(psi_ell).*pxu; %C3(b(3),1);
+% y_ell=a_ell'-(x_ell.^2).*a_ell'./b_ell';
+% y_ell=(y_ell.^(0.5));
+% C3_(1:b(3),3)=flip(y_ell);
+% x_ell=x_ell+sqrt(b_ell);
+% C3_(1:b(3),1)=flip(x_ell);
+
+N_discr=N_C1
+C1_=zeros(N_discr,3);
+
+%N_discr=size(C3,1)-b(3)+1+size(C1,1)
+CupperX=linspace(pxu,x_TEu,N_discr); %Poly6_end(N_discr,C3_(b(3),1),1,0,0,0,0,0,'f')
+%C3_(b(3):end,1)=CupperX(2:size(C3,1)-b(3)+2);
+d1a=(C3_(end,3)-C3_(end-1,3)) %/(C3_(b(3),1)-C3_(b(3)-1,1))
+d1b=(C1(end,3)-C1(end-1,3))%/(C1(end,1)-C1(end-1,1))
+d1b=-TEangleU*1E-6 %TEangleU=3.5 %-3.5E-6
+CupperY=Poly6(N_discr,C3_(end,3),y_TEu,0,d1b,-d1a/2,0,0,'f') % <- flattened
+%CupperY=Poly6_end(N_discr,C3_(end,3),y_TEu,0,d1b,-d1a/2,0,0,'f') % <- original
+C1_(:,1)=CupperX;
+C1_(:,3)=CupperY;
+
+plot(C1(:,1),C1(:,3));
+plot(C1_(:,1),C1_(:,3));
+
+% Lower side
+N_C4=round(N_discr_tot*pxl)
+N_C2=N_discr_tot-N_C4
+
+N_discr=N_C4
+C4_=zeros(N_discr,3);
+
+if(pyl==-roundy)
+    a_ell=pyl^2
+else
+    a_ell=Poly6(N_discr,roundy,-pyl,0,0,0,0,0,'f')
+    plot(a_ell)
+    a_ell=a_ell'.^2;
+end
+if(pxl==roundx)
+    b_ell=pxl^2
+else
+    b_ell=Poly6(N_discr,roundx,pxl,0,0,0,0,0,'f')
+    plot(b_ell)
+    b_ell=b_ell'.^2;
+end
+
+psi_ell=linspace(0,pi/2,N_discr)
+x_ell=-cos(psi_ell).*roundx %C3(b(3),1);
+plot(x_ell)
+
+y_ell=a_ell'-(x_ell.^2).*a_ell'./b_ell';
+y_ell=-(y_ell.^(0.5));
+C4_(:,3)=y_ell;
+plot(y_ell)
+
+x_ell=x_ell+roundx;
+x_ell=x_ell/roundx*pxl
+C4_(:,1)=x_ell;
+
+plot(C4(:,1),C4(:,3));
+plot(C4_(:,1),C4_(:,3));
+plot(C3_(:,1),-C3_(:,3));
+
+N_discr=N_C2
+C2_=zeros(N_discr,3);
+
+CupperX=linspace(C4_(end,1),x_TEl,N_discr); 
+%CupperX=Poly6_end(N_discr,pxl,x_TEl,(C4_(end,1)-C4_(end-1,1)),11E-6,0,0,0,'f')
+C2_(:,1)=CupperX;
+(C2_(2,1)-C2_(1,1))-(C4_(end,1)-C4_(end-1,1))
+d1a=(C4_(end,3)-C4_(end-1,3)) %(C4_(end,3)-C4_(end-1,3))/(C3_(b(3),1)-C3_(b(3)-1,1))
+%d1b=(C2(end,3)-C2(end-1,3))%/(C1(end,1)-C1(end-1,1))
+d1b=-TEangleL*1E-6 %-2E-6;
+CupperY=Poly6(N_discr,pyl,y_TEl,0,d1b,-d1a/2,0,0,'f')
+%CupperY=Poly6_end(N_discr,pyl,y_TEl,0,d1b,-d1a/2,0,0,'f')
+% figure
+% plot(CupperX,CupperY)
+%C4_(bb(3):end,3)=CupperY(2:size(C4,1)-bb(3)+2);
+C2_(:,1)=CupperX;
+C2_(:,3)=CupperY;
+
+plot(C2(:,1),C2(:,3));
+plot(C2_(:,1),C2_(:,3));
+
+% C4_=C4.*0;
+% [aa,bb]=min(C4)
+% N_discr=bb(3);
+% a_ell=Poly6(N_discr,-C4(bb(3),3),C3(b(3),3),0,0,0,0,0,'f')
+% a_ell=Poly6(N_discr,-pyl,pyu,0,0,0,0,0,'f')
+% %a_ell=-C4(bb(3),3);
+% a_ell=a_ell'.^2; %a_ell'.^2;
+% b_ell=Poly6(N_discr,pxl,pxu,0,0,0,0,0,'f')
+% %b_ell=C4(bb(3),1);
+% b_ell=b_ell'.^2; %a_ell'.^2;
+% psi_ell=linspace(0,pi/2,N_discr);
+% x_ell=-sin(psi_ell).*sqrt(b_ell(end));
+% y_ell=a_ell'-(x_ell.^2).*a_ell'./b_ell';
+% y_ell=-(y_ell.^(0.5));
+% C4_(1:bb(3),3)=flip(y_ell);
+% x_ell=x_ell+sqrt(b_ell');
+% C4_(1:bb(3),1)=flip(x_ell);
+
+% N_discr=size(C4,1)-bb(3)+1+size(C2,1)
+% CupperX=linspace(C4_(bb(3),1),x_TEl,N_discr); %Poly6_end(N_discr,C3_(b(3),1),1,0,0,0,0,0,'f')
+% C4_(bb(3):end,1)=CupperX(2:size(C4,1)-bb(3)+2);
+% d1a=(C4_(bb(3),3)-C4_(bb(3)-1,3))%/(C3_(b(3),1)-C3_(b(3)-1,1))
+% d1b=(C2(end,3)-C2(end-1,3))%/(C1(end,1)-C1(end-1,1))
+% CupperY=Poly6(N_discr,C4_(bb(3),3),y_TEl,0,d1b,-d1a/2,0,0,'f')
+% % figure
+% % plot(CupperX,CupperY)
+% C4_(bb(3):end,3)=CupperY(2:size(C4,1)-bb(3)+2);
+% C2_=C2.*0;
+% C2_(:,1)=CupperX(size(C4,1)-bb(3)+2:end);
+% C2_(:,3)=CupperY(size(C4,1)-bb(3)+2:end);
+
+plot(C4(:,1),C4(:,3))
+plot(C1(:,1),C1(:,3))
+plot(C2(:,1),C2(:,3))
+hold on
+plot(C4_(:,1),C4_(:,3),'-.r')
+plot(C2_(:,1),C2_(:,3),'--b')
+
+if(pxu>0.5)
+    [a b]=min(abs(C3_(:,1)-0.5))
+    C3_(b,1)
+    C3=C3_(1:b,:);
+    C3(end,1)-C3_(b,1)
+    N_C3-b+1
+    C1=zeros(size(C3_(b:end,1),1)+size(C1_(:,1),1)-1,3);
+    C1(1:N_C3-b+1,:)=C3_(b:end,:);
+    C1(N_C3-b+1:end,:)=C1_(1:end,:);
+else
+    [a b]=min(abs(C1_(:,1)-0.5))
+    C1_(b,1)
+    C1=C1_(b:end,:);
+    C1(1,1)-C1_(b,1)    
+    N_C3+b+1
+    C3=zeros(size(C1_(1:b,1),1)+size(C3_(:,1),1)-1,3);
+    C3(1:N_C3,:)=C3_(1:end,:);
+    C3(N_C3:end,:)=C1_(1:b,:);
+    C3(end,1)-C1(1,1)
+end
+
+if(pxl>0.5)
+    [a b]=min(abs(C4_(:,1)-0.5))
+    C4_(b,1)
+    C4=C4_(1:b,:);
+    C4(end,1)-C4_(b,1)
+    N_C4-b+1
+    C2=zeros(size(C4_(b:end,1),1)+size(C2_(:,1),1)-1,3);
+    C2(1:N_C4-b+1,:)=C4_(b:end,:);
+    C2(N_C4-b+1:end,:)=C2_(1:end,:);
+else
+    [a b]=min(abs(C2_(:,1)-0.5))
+    C2_(b,1)
+    C2=C2_(b:end,:);
+    C2(1,1)-C2_(b,1)    
+    N_C4+b+1
+    C4=zeros(size(C2_(1:b,1),1)+size(C4_(:,1),1)-1,3);
+    C4(1:N_C4,:)=C4_(1:end,:);
+    C4(N_C4:end,:)=C2_(1:b,:);
+    C4(end,1)-C2(1,1)
+end
+
+% C1=C1_;
+% C2=C2_;
+% C3=C3_;
+% C4=C4_;
+
+% blendF=Poly6_end(b(3),0,1,0,0,0,0,0,'f').^1;
+% C3_(1:b(3),1)=C3(1:b(3),1)+C3(1:b(3),1).*(scaleX-1).*blendF';
+% 
+% blendF=Poly6_end(size(C3,1)-b(3)+size(C1,1)-1,1,0,0,0,0,0,0,'f').^1.5;
+% C3_(b(3):end,1)=C3(b(3):end,1)+C3_(b(3):end,1).*(scaleX-1).*blendF(1:size(C3,1)-b(3)+1)';
+% C1_(:,1)=C1(:,1)+C1(:,1).*(scaleX-1).*blendF(size(C3,1)-b(3):end)';
+% 
+% figure
+% blendF=Poly6_end(size(C3,1)-b(3)+size(C1,1)-1,0,1,0,0,0,0,0,'f');
+% C3_(b(3):end,1)=C3(b(3):end,1).*scaleX+C3_(b(3):end,1).*(1-scaleX).*blendF(1:size(C3,1)-b(3)+1)';
+% C1_(:,1)=C1(:,1).*scaleX+C1(:,1).*(1-scaleX).*blendF(size(C3,1)-b(3):end)';
+
 y_LE=C3(1,3);
 xq=C3(1,1);
+
+dx=C1(end,1)-C2(end,1)
+dy=C1(end,3)-C2(end,3)
+atan(dx/dy)*360/(2*pi)
+
+close all
+
+figure
+plot(C1(:,1),C1(:,3),'-k')
+%daspect([1 1 1])
+daspect auto
+hold on
+plot(C2(:,1),C2(:,3),'-k')
+plot(C3(:,1),C3(:,3),'-k')
+plot(C4(:,1),C4(:,3),'-k')
+plot(C3_(:,1),C3_(:,3),'--r')
+plot(C1_(:,1),C1_(:,3),'--r')
+
+y_LE=C3(1,3)
+xq=C3(1,1)
+
+dx=C1(end,1)-C2(end,1)
+dy=C1(end,3)-C2(end,3)
+atan(dx/dy)*360/(2*pi)
+
+C3_(end,1)
+C1_(1,1)
+
+x_TEu-C1_(end,1)
+y_TEu-C1_(end,3)
+x_TEl-C2_(end,1)
+y_TEl-C2_(end,3)
+
+
+close all
+
+%figure
+figure
+plot(C3(:,1),C3(:,3),'-r')
+plot(C4(:,1),C4(:,3),'-r')
+plot(C1(:,1),C1(:,3),'-g')
+plot(C2(:,1),C2(:,3),'-g')
+hold on
+plot(C3_(:,1),C3_(:,3),'--k')
+plot(C4_(:,1),C4_(:,3),'--k')
+plot(C1_(:,1),C1_(:,3),'--b')
+plot(C2_(:,1),C2_(:,3),'--b')
+
 'Contour rotated to adjust angle of attack'
 %% P3: Basic domain settings
 %
-rad    = 7.3;           % Radius of half circle
+rad    = 7.5;            % Radius of half circle
 x_circ = 0.5;           % X-Coordinate of center of half circle
 y_circ = 0.0;           % Y-Coordinate of center of half circle
-%
 xOut     =5.5;          % X-position of outlet
 %
 xTEu     = C1(end,1);   % X-Position of upper TE
@@ -507,7 +904,7 @@ dummy			=A(31) %Airfoil extension
 Nbuffer			=A(32)   % Points in Xi used for transitioning from TE-continuation to horizontal grid line
 Nw              =A(33)   % Total number of grid points in Xi in B1&B3
 xTEc_save		=A(34)   % Approx. distance where transition to horizontal xi-gridlines should be finished (initial setting gets overwritten later)
-StretchW		=A(35)   % Stretching factor that causes the upper and lower contiuation to diverge in order to get a more uniform resolution in the wake-region away from the airfoil.
+StretchW		=A(35)   % Stretching factor that causes the upper and lower .datiuation to diverge in order to get a more uniform resolution in the wake-region away from the airfoil.
                          % For sharp TE this factor defines the stretching of grid cells along B1/B3 interface in eta-dirextion
 Nk              =A(36)   % xTE/Nk -> Fraction of contour-blending (to steer converging wall-gridlines in the wake)
 dsTEc			=A(37)   % Xi-Spacing at the end of transient
@@ -718,29 +1115,30 @@ const_line2=round(N_discr*0.1);     % Force number of points being on top-optimi
 blend_C=round(Nc2*0.25)             % Number of points left & right of LE which are uesed for a blending
 %--------------------------------------------------------------------------
 %Overrule parameters here
-prof_deriv1_wall1=3e-4
-prof_deriv1_wall2=5e-4
-prof_deriv1_wall3=1e-3
-prof_deriv1_top1=0.02
-prof_deriv1_top2=0.02
-prof_deriv1_top3=0.02
+NTEw=30
+StretchW=30
+StretchW_=30
+        NyTOT=480
+        Ny2=NyTOT+1-Ny1
+% prof_deriv1_wall1=1e-4
+% prof_deriv1_wall2=1e-4
+% prof_deriv1_wall3=1e-3
+% prof_deriv1_top1=0.03
+% prof_deriv1_top2=0.03
+% prof_deriv1_top3=0.03
+% % 
+% % %Those parameters are just for the default blunt trailing edge
+% % Nk=20 %recommended as default for sharp trailing edge: Nk=10
+% % StretchW_=5 % default as 1 means no stretching (used for sharp TE)
+% % StretchW=5  % default as 1 means no stretching (used for sharp TE)
+% % Nk_low=Nk*5 % For blunt trailing edge the control factor can be adjusted separately
 
-%Those parameters are just for the default blunt trailing edge
-% Nk=20 %recommended as default for sharp trailing edge: Nk=10
-% StretchW_=5 % default as 1 means no stretching (used for sharp TE)
-% StretchW=5  % default as 1 means no stretching (used for sharp TE)
-% Nk_low=Nk*5 % For blunt trailing edge the control factor can be adjusted separately
-
-%Those parameters are just for the default sharp trailing edge
-Nk=10
-StretchW_=1
-StretchW=1  
-Nk_low=Nk
 %--------------------------------------------------------------------------
 %% Start calculation of airfoil surface
 %%   Discretisation of trailing edge (TE) 
 if sharp==false
-    a_deg =  a_deg+a_rad_offset;
+    
+    a_deg=a_deg+a_rad_offset
     y_TE  =  linspace(yTE2,yTE1,NTEw);
     x_TE  =  xTEl+(xTEu-xTEl)/(yTE1-yTE2)*(y_TE-yTE2);
     s_TE  =  sqrt((xTEu-xTEl)^2+(yTE1-yTE2)^2);
@@ -771,18 +1169,18 @@ if draft=='T' % Set draft flag to 'T' to adjust distribution of points
               % Execute section by CTRL+ENTER. When finished, change 
               % parameters in I3&I4 and set draft flag to 'F'
     % Resolution
-    Nc1=440 %Nc1
+    Nc1=490 %Nc1
     %
-    dscu=0.0015 %dscu
-    dsTEu=dsTEu
+    %dscu=0.0012 %dscu
+    %dsTEu=0.001
     %
-    ddsTEu=ddsTEu
-    ddscu=ddscu
+    %ddsTEu=ddsTEu
+    %ddscu=ddscu
     %     
-    dddsTEu=dddsTEu % used for Poly6_end (lines below)
-    dddscu=dddscu % used for Poly6        (lines below)
+    %dddsTEu=dddsTEu % used for Poly6_end (lines below)
+    %dddscu=dddscu % used for Poly6        (lines below)
     %
-    phi_center1=0;
+    %phi_center1=0;
 end
 
 %s_C1=Poly6(Nc1,0,sC1(end),dscu,dsTEu,ddscu,ddsTEu,dddscu,'t');       % <--Choose
@@ -822,9 +1220,10 @@ if draft=='T'
     stop
 end
 'Contour 1 generated'
+
 %clearvars 'C1' 'sC1'
 %%   Contour 2
-close all
+%close all
 % _______________________________
 % Calculate Spacing
 sC2 = calc_s(C2(:,1),C2(:,3));
@@ -835,9 +1234,9 @@ if draft=='T' % Set draft flag to 'T' to adjust distribution of points
               % Execute section by CTRL+ENTER. When finished, change 
               % parameters in I3&I4 and set draft flag to 'F'
     % Resolution
-    Nc2=Nc2
+    Nc2=400
     %
-    dscl=0.0013 %dscu
+    dscl=dscu
     dsTEl=dsTEu
     %
     ddsTEl=ddsTEu
@@ -883,7 +1282,7 @@ end
 'Contour 2 generated'
 %clearvars 'C2' 'sC2'
 %%   Contour 3
-close all
+%close all
 % Calculate Spacing
 sC3 = calc_s(C3(:,1),C3(:,3));
 draft='F'
@@ -891,22 +1290,29 @@ if draft=='T' % Set draft flag to 'T' to adjust distribution of points
               % Execute section by CTRL+ENTER. When finished, change 
               % parameters in I3&I4 and set draft flag to 'F'
     % Resolution
-    Nc3=290
-    dsLE=0.002 %dsLE
-    ddsLE=ddsLE  
-    dddsLE=dddsLE % used for Poly6_end (lines below)
+    Nc3=410
+    dsLE=0.0003 %dsLE
+    dscu=0.0011 %0.0012
+    %ddsLE=ddsLE  
+    %dddsLE=0e-7 % used for Poly6_end (lines below)
+    %ddscu=-0e-6
+    dddscu=2e-7
 end
-%s_C3=Poly6_end(Nc3,0,sC3(end),dsLE,dscu,ddsLE,ddscu,dddscu,'t');
-s_C3=Poly6(Nc3,0,sC3(end),dsLE,dscu,ddsLE,ddscu,dddsLE,'t');
-
+s_C3_1=Poly6_end(Nc3,0,sC3(end),dsLE,dscu,ddsLE,ddscu,dddscu,'t');
+s_C3_2=Poly6(Nc3,0,sC3(end),dsLE,dscu,ddsLE,ddscu,dddsLE,'t');
+%blend _1 and _2 over
+blendW=Poly6_end(Nc3,0,1,0,0,0,0,0,'f');
+s_C3=s_C3_2+blendW.^3.*(s_C3_1-s_C3_2);
 % Interpolate spacing onto Contour
 Ic3 = Interp_onto(Nc3,C3,sC3,s_C3,'f');
 s_Ic3=calc_s(Ic3(:,1),Ic3(:,2));
 
 if draft=='T'
     figure
-    plot(Ic3(:,1),deriv(s_C3',1))
-    hold on
+    plot(Ic3(:,1),deriv(s_C3',1),'-k')
+        hold on
+    plot(Ic3(:,1),deriv(s_C3_1',1),'-b')
+    plot(Ic3(:,1),deriv(s_C3_2',1),'-r')
     stop
 end
 
@@ -922,7 +1328,7 @@ if draft=='T' % Set draft flag to 'T' to adjust distribution of points
               % Execute section by CTRL+ENTER. When finished, change 
               % parameters in I3&I4 and set draft flag to 'F'
     % Resolution
-    Nc4=310
+    Nc4=200
     dsLE=dsLE
     ddsLE=ddsLE  
     dddsLE=dddsLE % used for Poly6_end (lines below)
@@ -943,6 +1349,7 @@ end
 'Contour 4 generated'
 
 %clearvars 'C3' 'sC3'
+
 %%   Define wall-angels of eta-gridlines <- change blending-speed by modifying 'fac'
 close all
 %calculate wall normals and correct sign
@@ -964,12 +1371,14 @@ phi34(:,1)=-phi34(:,1)
 phi4_tan_=phi34(1:size(Ic4(:,1),1))
 phi4_tan_=-flipud(phi4_tan_)
 phi3_tan_=phi34(size(Ic4(:,1),1)+1:end)
+figure
 plot(phi4_tan_)
 %Section C3 
 fac=1
 blendF=Poly6(size(phi3_tan_,1),0,1,0,0,0,0,0,'f').^fac;
 %blendF=1-fliplr(blendF);
 phi3_tan_s=phi3_tan_+blendF'.*(phi_center1-phi3_tan_);
+figure
 plot(blendF)
 plot(s_Ic3,blendF)
 figure
@@ -977,13 +1386,23 @@ plot(s_Ic3,phi3_tan_s)
 hold on
 plot(s_Ic3,phi3_tan_)
 
+phi3_tan_=phi3_tan_s
+% ifix=6
+% blendF=Poly6_end(ifix,0,1,0,0,0,0,0,'t')';
+% phi3_tan_s(1:ifix,1)=pi/2-blendF.*(pi/2-phi3_tan_s(1:ifix,1))
+% size(phi3_tan_s(1:ifix,1))
+% figure
+% plot(s_Ic3,phi3_tan_s)
+% hold on
+% plot(s_Ic3,phi3_tan_)
+
 %Check carefully.....harsh changes in the wall-angels can lead to gridline intersections
 %
-% figure
-% plot(s_Ic3,deriv(deriv(phi3_tan_s,1),1))
+% % figure
+% % plot(s_Ic3,deriv(deriv(phi3_tan_s,1),1))
 
 %Section C4
-fac=10
+fac=1
 blendF=Poly6(size(phi4_tan_,1),0,1,0,0,0,0,0,'f').^fac;
 phi4_tan_s=phi4_tan_+blendF'.*(phi_center2-phi4_tan_);
 plot(blendF)
@@ -993,16 +1412,27 @@ plot(s_Ic4,phi4_tan_s)
 hold on
 plot(s_Ic4,phi4_tan_)
 
+phi4_tan_=phi4_tan_s
+% ifix=6
+% blendF=Poly6_end(ifix,0,1,0,0,0,0,0,'t')'
+% phi4_tan_s(1:ifix,1)=-pi/2-blendF.*(-pi/2-phi4_tan_s(1:ifix,1))
+% size(phi4_tan_s(1:ifix,1))
+% figure
+% plot(s_Ic4,phi4_tan_s)
+% hold on
+% plot(s_Ic4,phi4_tan_)
+
 %check overall
 
-% figure
-% plot(Ic3(:,1),deriv(deriv(phi3_tan_,1),1),'--r')
-% hold on
-% plot(Ic4(:,1),deriv(deriv(phi4_tan_,1),1),'--b')
+figure
+plot(deriv(deriv(phi3_tan_,1),1),'--r')
+hold on
+plot(deriv(deriv(phi4_tan_,1),1),'--b')
 
-% plot(Ic4(:,1),phi4_tan_s,'b')
-% hold on
-% plot(Ic4(:,1),phi4_tan_,'--r')
+figure
+plot(Ic4(:,1),phi4_tan_s,'b')
+hold on
+plot(-Ic3(:,1),-phi3_tan_s,'--r')
 
 'Angles for contour 3&4 generated'
 
@@ -1025,6 +1455,10 @@ plot(sC_tot)
 plot(C_tot(:,1),deriv(sC_tot,1))
 %plot(deriv(deriv(sC_tot,1),1))
  
+fname=['Cont_',num2str(pxu*10),num2str(pyu*100),num2str(pxl*10),num2str(-pyl*100),'_',num2str(roundx*10),num2str(roundy*100),'_',num2str(TEangleU),num2str(TEangleL),'.dat']
+save(fname,'C_tot', '-ascii')
+close all
+
 %% Calculate transition region downstream of the airfoil
 %%   Create shape of airfoil extension (Needs a bit of playing and depends strongly on the airfoil)
 %  --> often trade-off between smooth continuation of the airfoil, but
@@ -1036,15 +1470,17 @@ clearvars C_test C_new C_test2 C_new2
 dxcont=C1(end,1)-C1(end-1,1);
 xTEc=xTEc_save;
 N_discrW=round(xTEc/dxcont,3,'significant');
-StretchW_=StretchW
+StretchW_=StretchW/2
+Nk=10
+Nk_low=50
 if sharp==true
     StretchW=0;
     s_TE=0;
     djTE=0;
 end
 s_TE=sqrt((xTEu-xTEl)^2+(yTE1-yTE2)^2);
-yTEuC=yTE1+StretchW*s_TE/2 %djTE/2*NTEw-djTE/2*NTEw
-yTElC=yTE2-StretchW*s_TE/2 %djTE/2*NTEw-djTE/2*NTEw
+yTEuC=yTE1+StretchW*s_TE*0.5 %djTE/2*NTEw-djTE/2*NTEw
+yTElC=yTE2-StretchW*s_TE*0.5 %djTE/2*NTEw-djTE/2*NTEw
 
 % It is tried to adapt the raw-resolution of the airfoil extension to the
 %   raw resolution of the airfoil
@@ -1061,21 +1497,23 @@ ddydxC1=dyC1./dxC1.*deriv((1./dxC1),1)+ddyC1./((dxC1).^2);
 
 yw1=yTE1-(xTEc_-xTEu)*atan(a_deg-a_rad_offset);
 yw2=yTE2-(xTEc_-xTEl)*atan(a_deg-a_rad_offset);
-
+yw1=yw2
 %Generate polynomial extension
 w_xu=linspace(xTEu,xTEc,N_discrW);
 dw_xu=deriv(w_xu',1);
-w_yu1=Poly6_s(N_discrW/Nk,xTEu,xTEc_,yTE1,yw1,dydxC1(end),0,ddydxC1(end),0,0,'f');
+w_yu1=Poly6_s(N_discrW/Nk,xTEu,xTEc_,yTE1,yw1,dydxC1(end),0,0,0,0,'t');
 w_yu1(N_discrW/Nk:size(w_xu,2))=w_yu1(N_discrW/Nk);
 
 %Blend y-coordinate of polynomial with a horizontal line going through the
 %  corner of the trailing edge
-blendW=Poly6_end(N_discrW/Nk,0,1,0,0,0,0,0,'f');
+blendW=Poly6_end(N_discrW/Nk,1,0,0,0,0,0,0,'f');
 bl(1:N_discrW/Nk)=blendW;
 bl(N_discrW/Nk+1:N_discrW)=bl(end);
 blendW=bl;% Assign blending function
 clearvars lam bl bl_ a b c d blendWL
-w_yu = w_yu1 + blendW.*(yTE1-w_yu1);
+
+%w_yu = w_yu1 + blendW.*(yTE1-w_yu1);
+w_yu = yTE1 + blendW.^10.*(w_yu1-yTE1);
 
 figure
 plot(C1(:,1),C1(:,3),'-k')
@@ -1086,12 +1524,14 @@ plot(w_xu,w_yu1.*0+yTE1,'--')
 plot(w_xu,w_yu,'--')
 
 %Blend that curve again to generate diverging end
-bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
-blendWL=bl;               %% Assign blending function
-w_yu= w_yu + blendWL.*(yTEuC-w_yu);
+%bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
+bl=Poly6_end(N_discrW,1,0,0,0,0,0,0,'f');
+blendWL=bl.^5;               %% Assign blending function
+%w_yu= w_yu + blendWL.*(yTEuC-w_yu);
+w_yu= yTEuC + blendWL.*(w_yu-yTEuC);
 clearvars lam bl bl_ a b c d blendWL
 plot(w_xu,w_yu,'-r')
-daspect([1 1 1])
+%daspect([1 1 1])
 %Generate equidistant curve for later
 w_yu2=w_yu-s_TE;
 
@@ -1118,23 +1558,30 @@ w_xl= w_xl_ + blendWL.*(w_xl_2-w_xl_);
 clearvars lam bl bl_ a b c d blendWL
 
 %Calculate the y-coordinate of the lower extension again by a polinomial
-w_yl_=Poly6_sL(N_discrW/Nk,w_xl(1:N_discrW/Nk),yTE2,yw2,dydxC2(end),0,ddydxC2(end),0,0,'f');
+w_yl_=Poly6_sL(N_discrW/Nk,w_xl(1:N_discrW/Nk),yTE2,yw2,dydxC2(end),0,0,0,0,'f');
 w_yl_(N_discrW/Nk:size(w_xl,2))=w_yl_(N_discrW/Nk);
 plot(w_xl,w_yl_)
-daspect([1 1 1])
+%daspect([1 1 1])
 %Blend with equidistant curve to upper extension
+%blendWL=Poly6_end(N_discrW/Nk_low,1,0,0,0,0,0,0,'f');
 blendWL=Poly6_end(N_discrW/Nk_low,0,1,0,0,0,0,0,'f');
 blendWL(N_discrW/Nk_low:size(w_xl,2))=blendWL(end);
+%w_yl=w_yl_ + blendWL.*(w_yu2-w_yl_);
+%w_yl=w_yu2 + blendWL.^30.*(w_yl_-w_yu2);
 w_yl=w_yl_ + blendWL.*(w_yu2-w_yl_);
-plot(w_xl,w_yu2)
+
+plot(w_xl,w_yu2,'-b')
 plot(w_xl,w_yl)
+
 clearvars lam bl bl_ a b c d blendWL
 %Blend that curve again to generate diverging end
-bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
-blendWL=bl;%% Assign blending function
-w_yl= w_yl + blendWL.*(yTElC-w_yl);
+%bl=Poly6_end(N_discrW,0,1,0,0,0,0,0,'f');
+bl=Poly6_end(N_discrW,1,0,0,0,0,0,0,'f');
+blendWL=bl.^10;%% Assign blending function
+%w_yl= w_yl + blendWL.*(yTElC-w_yl);
+w_yl=yTElC - blendWL.*(yTElC-w_yl);
 clearvars lam bl bl_ a b c d blendWL
-plot(w_xl,w_yl,'-r')
+plot(w_xl,w_yl,'-b')
 
 %......and quickly check it in between:
 clearvars C_test1
@@ -1156,6 +1603,7 @@ C_new2(:,2)=w_yl_(1,1:end);
 figure
 plot(deriv(deriv(C_test2(:,2),1),1)./(deriv(C_test2(:,1),1).^2)+deriv(C_test2(:,2),1)./deriv(C_test2(:,1),1).*deriv(1./(deriv(C_test2(:,1),1)),1),'b')
 'continuous airfoil extension generated'
+
 %%   Discretisation of airfoil extension and corresponding outer domain bound
 close all
 if sharp == false
@@ -1164,12 +1612,12 @@ if sharp == false
     sCwl = calc_s(w_xl',w_yl');
     draft='F'
     if draft=='T'
-        Nbuffer=180 %Nbuffer
-        Nw=280 %Nw
-        dsTEc=dsTEc
-        ddsTEc=ddsTEc
+        Nbuffer=400 %Nbuffer
+        Nw=800 %Nw
+        dsTEc=0.005
+        ddsTEc=2e-5
         dddsTEc=dddsTEc
-        dsOut=0.08
+        dsOut=0.02
         ddsOut=0
         dddsOut=0
     end   
@@ -1214,7 +1662,7 @@ if sharp == false
         
         %plot(s_CwuTEST,deriv(s_CwuTEST',1))
         clear vars s_CwuTEST
-        stop
+        %stop
     end
         
     %Carry out interpolation for upper side
@@ -1334,20 +1782,21 @@ phi_tot2=fliplr(phi_wl);
 phi_tot2(size(phi_wl,2)+1:size(phi_wl,2)+size(phi_tot,1)-1)=phi_tot(2:end);
 phi_tot2(size(phi_wl,2)+size(phi_tot,1)-1:size(phi_wl,2)+size(phi_tot,1)-1+size(phi_wu,2)-1)=phi_wu;
 
-figure
-plot(phi_tot2)
-plot(C_tot(:,1),deriv(deriv((phi_tot),1),1))
+% figure
+% plot(phi_tot2)
+% plot(C_tot(:,1),deriv(deriv((phi_tot),1),1))
 'Angels defined for extension'
 %% Calculate gridlines at the outer boundary of the C-block
+
 %%   Top of Contour 1
 close all
 clearvars It1
 draft='F'
 if draft=='T'
-    dsTEut=dsTEu
-    dscut=0.00215
-    ddscut=-2.1e-5  %ddscu
-    dddscut=3e-7
+    %dsTEut=dsTEu
+    %dscut=0.0011
+    %ddscut=-7e-7  %ddscu
+    dddscut=-1.8e-8
 end
 
 It1(:,1)=Poly6(Nc1,xcu,xTEu,dscut,dsTEut,ddscut,ddsTEut,dddscut,'t');
@@ -1403,6 +1852,7 @@ end
 
 'Top of Contour 2 generated'
 %%   TOP of Contour 3
+
 close all
 % Angles at the outer surface are approximated by polynomials to steer
 % angle close to symmetry-line to avoid intersections of gridlines
@@ -1411,13 +1861,15 @@ close all
 close all
 draft='F'
 if draft=='T'
-    dLE_tan=0.08 %dLE_tan
+    dLE_tan=0.045 %dLE_tan
+    dscut=0.0011
     ddLE_tan=ddLE_tan
-    dddLE_tan=dddLE_tan
+    dddLE_tan=2e-6
+    ddscut=0e-7 %-7e-7
 end
 
 s_t3 = Poly6_end(size(s_Ic3,2),0,rad*pi/2,dLE_tan,dscut,ddLE_tan,ddscut,dddscut,'t');
-%s_t3 = Poly6(size(s_Ic3,2),0,rad*pi/2,dLE_tan,dscut,ddLE_tan,ddscut,dddLE_tan,'t');
+s_t3 = Poly6(size(s_Ic3,2),0,rad*pi/2,dLE_tan,dscut,ddLE_tan,ddscut,dddLE_tan,'t');
 
 phi_poly=linspace(0,pi/2,10000000);
 x_poly=x_circ-rad.*cos(phi_poly);
@@ -1534,8 +1986,11 @@ phit_tot(size(It2,1)+size(It4,1)-1+size(It3,1)-1:size(It2,1)+size(It4,1)-1+size(
 figure
 plot(Ct_tot(:,1),deriv(deriv(sCt_tot,1),1))
 
-'All Contours merged'
+dx=C_tot(end,1)-C_tot(1,1)
+dy=C_tot(end,2)-C_tot(1,2)
+atan(dx/dy)*360/(2*pi)
 
+'All Contours merged'
 %% Define polynomial describing boundary conditions for eta-gridlines
 %%   Define and Test Eta-Gridline at TE
 close all
@@ -1583,7 +2038,7 @@ if 1==1 %(No changes here)
 end % Generate Shape (No input needed)
 %
 % Specify distribution
-Style=1 % <-- Choose Version 1/2/3
+Style=2 % <-- Chose Version 1/2/3
 %
 %Version 1: Simplest version
 if Style==1
@@ -1611,15 +2066,8 @@ end % <-- Set Spacing
 if Style==2 || Style==3
     draft='f'
     if draft=='t'
-        NyTOT=100
-        prof_deriv1_top=1
-        prof_deriv2_top=0e-2
-        prof_deriv2_top=0e-4
-        prof_deriv1_wall=2e-6
-        prof_deriv2_wall=0
-        prof_deriv3_wall=0
-        prof_deriv1_cont=0;
-        prof_deriv2_cont=0;
+        NyTOT=480
+        Ny2=NyTOT+1-Ny1
     end
     if sharp == false
         prof_deriv1_wall=djTE
@@ -1749,7 +2197,7 @@ if Style==3
     suggest='t'
     if suggest=='t'
         control_dist=control_dist
-        index=find(abs(s_JJ-control_dist)<0.001) % <-- Default for Ny1
+        index=find(abs(s_JJ-control_dist)<0.01) % <-- Default for Ny1
         index=index(end)
         index=125 % <-- Index must agree with other positions
         Ny1=index
@@ -1783,7 +2231,7 @@ prof_deriv2_top2=prof_deriv2_top;
 prof_deriv3_top2=prof_deriv3_top;
 'Center defined'
 %%   Define and Test Eta-Gridline at LE
-close all
+%close all
 %
 %Load input parameters
 control_dist=control_dist3
@@ -1830,7 +2278,7 @@ end % Generate Shape (No input needed)
 %
 %Version 1: Simplest version
 if Style==1
-    draft='f'
+    draft='t'
     if draft=='t'
         control_dist=control_dist1
         prof_deriv1_wall=prof_deriv1_wall1;
@@ -1847,24 +2295,25 @@ end % <-- Set Spacing
 %Version 2: Simple simple & no stretching at both ends (Cheaper)
 % --> a good starting point for Version 3
 if Style==2 || Style==3
-    draft='f'
+    draft='t'
     if draft=='t'
-        prof_deriv1_top=0.01 %prof_deriv1_top
+        prof_deriv1_top=0.021 %prof_deriv1_top
         prof_deriv2_top=prof_deriv2_top
         prof_deriv3_top=prof_deriv3_top
-        prof_deriv1_wall=prof_deriv1_wall
+        prof_deriv1_wall=1e-4 %prof_deriv1_wall
         prof_deriv2_wall=prof_deriv2_wall
         prof_deriv3_wall=prof_deriv3_wall
     end
     s_JJ=Poly6_Jend(Ny1+Ny2-1,0,s_GL(end),prof_deriv1_wall,prof_deriv1_top,prof_deriv2_wall,prof_deriv2_top,prof_deriv3_top,'t');
 end % <-- Set Spacing
+
 % First draft for Version 3
 if Style==3
     suggest='t'
     if suggest=='t'
-        %control_dist=0.05
-        %index=find(abs(s_JJ-control_dist)<0.01) % <-- Index must agree with other positions
-        index=125 %index(end)
+        control_dist=0.01
+        index=find(abs(s_JJ-control_dist)<0.01) % <-- Index must agree with other positions
+        index=index(end)
         Ny1=index
         Ny2=NyTOT-index+1
         control_dist=s_JJ(index)
@@ -1877,14 +2326,15 @@ if Style==3
     % Fine-tuning for Version 3: Takes a bit of playing around
     draft='t'
     if draft=='t'
-          prof_deriv1_wall=prof_deriv1_wall3;
-          prof_deriv1_top=prof_deriv1_top3
+          %prof_deriv1_wall=1e-4
+          prof_deriv1_top=0.03
+          %prof_deriv1_cont(1)=0.02 %0.0061
+          %prof_deriv2_cont(1)=1e-8
     end
     s_JJ=Poly_J(Ny1(1),Ny2(1),0,control_dist(1),s_GL(end),prof_deriv1_wall,prof_deriv1_cont(1),prof_deriv1_top,prof_deriv2_wall,prof_deriv2_cont(1),prof_deriv2_top,'t');
 end
 figure
 plot(s_JJ,deriv(s_JJ',1))
-
 figure
 plot(s_JJ)
 %%   Saving Parameters 
@@ -1899,25 +2349,25 @@ prof_deriv2_top3=prof_deriv2_top;
 prof_deriv3_top3=prof_deriv3_top;
 'LE defined'
 %%   EPS FIGURES in order to compare grids (just uncomment, if needed)
-figure
-axes1 = axes('Parent',figure);
-hold(axes1,'on');
-box(axes1,'on');
-set(axes1,'YTick',...
-[0 0.002 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.022]);
-plot(s_JJ,deriv(s_JJ',1))
-ylim(axes1,[0 0.022]);
-xlim(axes1,[0 7.5]);
-
-figure
-axes1 = axes('Parent',figure);
-hold(axes1,'on');
-box(axes1,'on');
-set(axes1,'YTick',...
-[0 0.002 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.022]);
-plot(deriv(s_JJ',1))
-ylim(axes1,[0 0.022]);
-xlim(axes1,[1 689]);
+% figure
+% axes1 = axes('Parent',figure);
+% hold(axes1,'on');
+% box(axes1,'on');
+% set(axes1,'YTick',...
+% [0 0.002 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.022]);
+% plot(s_JJ,deriv(s_JJ',1))
+% ylim(axes1,[0 0.022]);
+% xlim(axes1,[0 7.5]);
+% 
+% figure
+% axes1 = axes('Parent',figure);
+% hold(axes1,'on');
+% box(axes1,'on');
+% set(axes1,'YTick',...
+% [0 0.002 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.022]);
+% plot(deriv(s_JJ',1))
+% ylim(axes1,[0 0.022]);
+% xlim(axes1,[1 689]);
 %%   Generate Distribution function (no input needed)
 prof_deriv1_wall(1:size(Ic2,1)) = Poly6_s(size(Ic2,1),0,xTElt-0.5,prof_deriv1_wall1,prof_deriv1_wall2,0,0,0,0,0,'f');
 prof_deriv1_wall(size(Ic2,1):size(Ic2,1)+size(Ic4,1)-1) = Poly6_s(size(Ic4,1),0,0.5-xq,prof_deriv1_wall2,prof_deriv1_wall3,0,0,0,0,0,'f');
@@ -2011,7 +2461,7 @@ name_output= [name_dir,'/.']
 name_input= [name_dir,'/Input.txt']
 name_input_usr= [name_dir,'/Input_readable.txt']
 dummy=1e99
-status = system(['cp PolyGridWizZ_V*.m ', name_output])
+status = system(['cp PolyGridWizZ_v*.m ', name_output])
 if safe_input=='on'
     vars=[
         dummy %TE
@@ -2141,6 +2591,10 @@ if safe_input=='on'
     fclose(fid);
 end
 
+dx=Ic1(end,1)-Ic2(end,1)
+dy=Ic1(end,2)-Ic2(end,2)
+atan(dx/dy)*360/(2*pi)
+
 '--- Ready for generating Block 2 ---'
 stop
 %% Loop trough every point in xi-direction (This can take a while)
@@ -2196,7 +2650,7 @@ for i=2:step:size(C_tot,1)-1
     GL(:,3)=y_fin;
     
     s_GL=calc_s(GL(:,1),GL(:,3));
-    
+
      %Version 1: Simplest version
     if Style==1
         s_J=Poly6_J(Ny1+Ny2-1,0,s_GL(end),prof_deriv1_wall(i),prof_deriv1_top(i),prof_deriv2_wall(i),prof_deriv2_top(i),prof_deriv3_wall(i),'f');
@@ -2225,10 +2679,10 @@ end
 'Start generating Block 2'
 name_output= [name_dir,'/Bl2.dat']
 fileID = fopen(name_output,'w');
-%fprintf(fileID,'%d %d\n',size(C_tot,1)-2,Ny1+Ny2-1);
-fprintf(fileID,'%d %d\n',size(C_tot,1),Ny1+Ny2-1);
-%for i=2:1:size(C_tot,1)-1
-for i=1:1:size(C_tot,1)
+fprintf(fileID,'%d %d\n',size(C_tot,1)-2,Ny1+Ny2-1);
+%fprintf(fileID,'%d %d\n',size(C_tot,1),Ny1+Ny2-1);
+for i=2:1:size(C_tot,1)-1
+%for i=1:1:size(C_tot,1)
     sig_phi=(Ct_tot(i,2)+1e-20)/(abs(Ct_tot(i,2))+1e-20);
     if(Ct_tot(i,2)==0)
         phi_tot(i)=pi/2;
@@ -2880,7 +3334,7 @@ B3=load('Bl3.dat');
 %global TE LE n2i n2j n1i n1j
 TE=NTEw %Resolution of blunt Trailing edge
 LE=size(Ic2,1)+size(Ic4,1)-2   %Position of Leading in Block 2 
-n2i=size(C_tot,1) %-2
+n2i=size(C_tot,1)-2
 n2j=Ny1+Ny2-1
 n1i=Nw-1
 n1j=n2j+TE/2-1
@@ -2965,14 +3419,12 @@ end
 daspect([1 1 1])
 
 %% Processor calculator
-% This script suggests numbers of processors per block
-%--------------------------------------------------------------------------
-Node_in     =   60 % Nodes preferred 
-%                    --> results will be filtered accordingly in output_new
-npp         =   16 % Processors per node
-%--------------------------------------------------------------------------
-Node_range  =   round(Node_in*0.25); 
 close all
+k=1
+Node_in     =   10   % Nodes preferred --> results will be filtered accordingly in output_new
+Node_range  =   round(Node_in*0.25);  % 
+npp         =   128   % Processors per node
+
 % Block 1 
 i1=(Nw-1);                  % Number of Points in xi
 j1=(Ny1+Ny2-1+NTEw/2-1);    % Number of Points in eta
