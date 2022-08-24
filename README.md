@@ -22,9 +22,6 @@ The DOI of the current beta-version 0.0.1 is 10.5281/zenodo.1245598
 
 Execute and follow instructions: PolyGridWizZ_v001_beta.m
 
-# PolyGridWizZ_v1.0.1 (planned)
-Version 1.0.1 is planned to
-- be written in Python
-- be fully parallelised
-- contain new features to improve the design of gridlines and grid-point distributions
-- be embedded in the Jupyter environment
+# PolyGridWizZ_ParamAir:
+
+This version allows to generate grids around parametric airfoils, which are defined by 6 parameters defining thickness and curvature characteristics.
